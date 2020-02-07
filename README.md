@@ -43,3 +43,10 @@ With hard-coded approach the compiler can see few things:
   - That the PORT pointer is not regular 16-bit pointer, for lower address regions there are instructions with I/O direct addressing, for 6-bit addresses (0x20 - 0x5F) there is input (IN) instruction where the address is part of the OP-code and there is no need to use the 16-bit register pairs, it loads the content into a register and with ANDI mask can be tested for the bit. However for even lower 5-bit region (0x20 - 0x3F) there are instructions (SBIC/SBIS) which can test for a specific bit being set/clear without even loading the content into a register or needing to invoke ANDI. Not just this combines two steps into one, but both address and bit location are direct and are part of the OP-code, so no need to load registers with the address and bit. 
   
   - Because compiler knows in advance that the desired port is in the **I/O 5-bit** region and that the mask is **one-hot**, it can effectively utilized the **SBIC** / **SBIS** instructions and drastically speed up the runtime execution, which so essential for this approach to work. And wouldn't be possible if the code would have to be generic and work with any mask and pointer. It's cleaner as well, everything needed is contained in the instruction and doesn't require any other registers to be populated. Even when this speed is great, I reckon that the sampling rate can be still significantly improved.
+
+# References
+
+https://en.wikipedia.org/wiki/Capacitive_sensing
+
+http://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7810-Automotive-Microcontrollers-ATmega328P_Datasheet.pdf
+

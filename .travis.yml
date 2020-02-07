@@ -1,0 +1,17 @@
+language: aarontc/arduino-builder
+sudo: false
+
+branches:
+  only:
+  - develop
+  - master
+
+tags:
+  enabled: false
+
+script:
+- mkdir build-uno
+- mkdir build-due
+- mkdir build-nano
+- ln -s ./ SinglePinCapacitiveSense
+- arduino-builder -compile -hardware /arduino/hardware -tools /arduino/hardware/tools/avr -tools /arduino/tools-builder -fqbn arduino:avr:uno -libraries ./ -verbose -build-path ./build-uno ./examples/PollingThreePins/PollingThreePins.ino

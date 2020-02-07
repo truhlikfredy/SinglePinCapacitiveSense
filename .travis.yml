@@ -1,4 +1,4 @@
-language: aarontc/arduino-builder
+language: generic
 sudo: false
 
 branches:
@@ -14,4 +14,4 @@ script:
 - mkdir build-due
 - mkdir build-nano
 - ln -s ./ SinglePinCapacitiveSense
-- arduino-builder -compile -hardware /arduino/hardware -tools /arduino/hardware/tools/avr -tools /arduino/tools-builder -fqbn arduino:avr:uno -libraries ./ -verbose -build-path ./build-uno ./examples/PollingThreePins/PollingThreePins.ino
+- docker run -it --rm -v $(pwd):/workspace -u $(id -u):$(id -g)  aarontc/arduino-builder arduino-builder -compile -hardware /arduino/hardware -tools /arduino/hardware/tools/avr -tools /arduino/tools-builder -fqbn arduino:avr:uno -libraries /workspace/ -verbose -build-path /workspace/build-uno /workspace/examples/PollingThreePins/PollingThreePins.ino

@@ -1,7 +1,7 @@
 
 # Features
 
-- Requires only **1 digital input** on a AVR
+- Requires only **1 digital input** on an AVR
 - Doesn't require any additional capacitor/resistor, **no external components**
 - Should be faster than 2 pin or ADC method
 
@@ -20,15 +20,15 @@
 
 Typically the capacitive sensing forms a small capacitor between the sensor and the finger, charging (and discharging) it while measuring the time (or voltage) can estimate the capacitance and from that figure out that a press has happened. Because area and distance can affect capacitance therefore pressing harder on the surface can increase the capacity and the strength can be detected as well. Microchip's Atmel Qtouch has dedicated HW pins have good accuracy and sensitivity, but this HW feature is not present everywhere. There is SW QTouch support with as well, but for a selected targets. And then there are Arduino libraries implementing this in software, either depending on ADC pin, or 2-pins with an external resistor. This library takes the 2-pin approach, but instead of using separate sending pin with a large resistor, the pin is setup to INPUT and a internal pull-up resistor is enabled. See the unmarked resistor on the left side of the pin's diagram:
 
-![pin's pull-up schema](images/pullup.png)
+![pin's pull-up schema](../assets/images/pullup.png?raw=true)
 
 This resistor is around **20k-100k** and is magnitude smaller than it would be ideal and the charge up process happens much faster than typically, therefore the code needs to be sampling very quickly. See charge up characteristics when nothing is touched:
 
-![normal operation](images/free-running.png)
+![normal operation](../assets/images/free-running.png?raw=true)
 
 When sensor is touched the capacitance increases and charge-up slows down, but not as radically as it would be desired and this still requires fast sampling, see figure below:
 
-![charging up when touching](images/press.png)
+![charging up when touching](../assets/images/press.png?raw=true)
 
 The fact that whit **TTL 5V** the input can be considered **HIGH** already at **2V** is making this even more time critical. On the figures above the voltage can get over 2V because the sampling is not as fast and charged up beyond the 2V before it was tested and pulled down. Other problem is that the pull-up resistor is not exactly specified and can be different between the devices. So this approach is not as robust/portable as the previously mentioned approaches, but if somebody can tune it for their device/environment/conditions, then it should be fine for hobby projects. However this shouldn't be used for any critical input on a system which needs to be dependable.
 

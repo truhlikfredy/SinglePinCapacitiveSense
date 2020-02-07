@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/truhlikfredy/SinglePinCapacitiveSense.svg?branch=master)](https://travis-ci.org/truhlikfredy/SinglePinCapacitiveSense)
 
 # Features
 

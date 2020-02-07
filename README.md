@@ -51,3 +51,4 @@ https://en.wikipedia.org/wiki/Capacitive_sensing
 
 http://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7810-Automotive-Microcontrollers-ATmega328P_Datasheet.pdf
 
+https://www.arduino.cc/en/Reference/PortManipulation

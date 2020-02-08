@@ -1,19 +1,24 @@
 #include "SinglePinCapacitiveSense.h"
 
-// Whole functionality depends on the internal pull-up resistor, threfore the PUD 
-// pull-up-disable has to be off.
+// Whole functionality depends on the internal pull-up resistor, threfore the 
+// PUD pull-up-disable has to be off.
 
-// Pin's base address and it's mask has to be hardcoded, specific Arduino pins might have 
-// different addresses or masks between some Arduino boards and therefore a runtime check 
-// is recomended to confim if the expected Arduino pin matches the hardcoded port address
-// and mask. These are hardcoded because it's necesary for performance which is critical
-// in sensing capacitance without external resistor.
-// Tested on Arduino Duemilanove ATmega328
-// Multiple constructors are avaiable, if samples, pressThreshold are not given then,
-// default values will be used instead (defaults can be changed in SinglePinCapacitiveSense.h)
+// Pin's base address and it's mask has to be hardcoded, specific Arduino pins 
+// might have different addresses or masks between some Arduino boards and 
+// therefore a runtime check is recomended to confim if the expected Arduino 
+// pin matches the hardcoded port address and mask. These are hardcoded because 
+// it's necesary for performance which is critical in sensing capacitance 
+// without external resistor.
 
-// This is to work around "because it is not the address of a variable" error where template
-// argument is refused because it's not a pointer to a variable.
+// Tested on: Arduino Duemilanove ATmega328 - 16MHz
+
+// Multiple constructors are avaiable, if samples, pressThreshold are not
+// given then, default values will be used instead (default can be changed
+// with define:
+// SINGLE_PIN_CAPACITIVE_SENSE_DEFAULT_SAMPLING
+
+// This is to work around "because it is not the address of a variable" error 
+// where template argument is refused because it's not a pointer to a variable.
 constexpr uintptr_t PortD() {
   return (uintptr_t)&PIND;
 }
@@ -29,17 +34,23 @@ SinglePinCapacitiveSense<PortD(), 16> capacitivePin4; // Arduino pin 4 is on por
 // SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>(uint8_t samples);
 // SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>();
 
+// Usually Arduino pin 0-7 are PORTD, 8-13 PORTB (do not use analogue ports for
+// this). If not exactly knowing how to setup the mask and port address then
+// just make the pin with some estimated values (even wrong ones) and call
+// IsValidConfig(<DESIRED_ARDUINO_PIN>) it will validate the settings and if 
+// they are not correct it will output on the uart what is expected for that 
+// Arduino pin.
 
 bool isPinsConfigValid() {
-  // Checking if Arduino pin 2 coresponds to the hardcoded values in our capacitivePin2
+  // Check if Arduino pin 2 coresponds to the values in our capacitivePin2
   Serial.print("Config for capacitivePin2:");
   if (!capacitivePin2.IsValidConfig(2)) return false;
 
-  // Checking if Arduino pin 3 coresponds to the hardcoded values in our capacitivePin3
+  // Check if Arduino pin 3 coresponds to the values in our capacitivePin3
   Serial.print("Config for capacitivePin3:");
   if (!capacitivePin3.IsValidConfig(3)) return false; 
 
-  // Checking if Arduino pin 4 coresponds to the hardcoded values in our capacitivePin4
+  // Check if Arduino pin 4 coresponds to the values in our capacitivePin4
   Serial.print("Config for capacitivePin4:");
   if (!capacitivePin4.IsValidConfig(4)) return false; 
 
@@ -63,7 +74,12 @@ void setup() {
 }
 
 
-void loop() {    
+void loop() {
+  // For the first 4 iterations of this loop the sense will not trigger as they
+  // are calibrating, this can be changed with define:
+  // SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT
+  // And it will affect how quickly the calibration.
+
   if (capacitivePin2.IsPressed() || capacitivePin3.IsPressed() || capacitivePin4.IsPressed() ) {
     digitalWrite(LED_BUILTIN, HIGH);
   } else {      
@@ -81,5 +97,5 @@ void loop() {
   
   Serial.println();
   
-  delay(50); // The loop can go faster if needed, the delay can be completely removed
+  delay(50); // The delay can be completely removed if needed
 }

@@ -1,2 +1,4 @@
 /images
 /.vscode
+/build*
+/SinglePinCapacitiveSense

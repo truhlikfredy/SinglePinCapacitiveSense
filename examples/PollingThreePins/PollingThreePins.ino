@@ -1,5 +1,7 @@
 #include "SinglePinCapacitiveSense.h"
 
+// Copyright 2020 Anton Krug - MIT License
+
 // Whole functionality depends on the internal pull-up resistor, therefore the
 // PUD pull-up-disable has to be off.
 

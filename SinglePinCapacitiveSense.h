@@ -1,6 +1,8 @@
 #ifndef SinglePinCapacitiveSense_h
 #define SinglePinCapacitiveSense_h
 
+// Copyright 2020 Anton Krug - MIT License
+
 #include <Arduino.h>
 
 #ifndef SINGLE_PIN_CAPACITIVE_SENSE_BLOCK_IRQ

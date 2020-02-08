@@ -1,10 +1,15 @@
 [![Build Status](https://travis-ci.org/truhlikfredy/SinglePinCapacitiveSense.svg?branch=master)](https://travis-ci.org/truhlikfredy/SinglePinCapacitiveSense)
 
+# Getting started in 1 minute
+
+[![1min getting started video](https://img.youtube.com/vi/KwPeKHTvGJs/0.jpg)](https://www.youtube.com/watch?v=KwPeKHTvGJs)
+
+
 # Features
 
-- Requires only **1 digital input** on an AVR
-- Doesn't require any additional capacitor/resistor, **no external components**
-- Should be faster than 2 pin or ADC method
+- Requires only **1 digital input** on an AVR.
+- Doesn't require any additional capacitor/resistor, **no external components**.
+- Should be faster than 2 pin or ADC method.
 
 # Disadvantages
 
@@ -12,10 +17,11 @@
 - No way to increase the resistance and no way increase the sensitivity, only touch can be detected, **no proximity sensor**
 - Depends on fast clock, tested on **16MHz**, this **could be improved** and the performance still can be better and should be possible to support lower clocks.
 - Because the C++ templates are used the code size will increase when more sensors are created.
+- Will not work on non AVR Arduinos (if needed I could make ports).
 
 # Tested devices
 
-- Arduino Duemilanova - ATmega328
+- Arduino Duemilanova - ATmega328 - 16MHz
 
 # How this works
 

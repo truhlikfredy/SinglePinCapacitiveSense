@@ -3,8 +3,9 @@
 
 #include <Arduino.h>
 
-// TODO: Allow external config
-#define SINGLE_PIN_CAPACITIVE_SENSE_BLOCK_IRQ
+#ifndef SINGLE_PIN_CAPACITIVE_SENSE_BLOCK_IRQ
+#define SINGLE_PIN_CAPACITIVE_SENSE_BLOCK_IRQ 0
+#endif
 
 #ifndef SINGLE_PIN_CAPACITIVE_SENSE_DEFAULT_SAMPLING
 // How often the pin will get sampled by default
@@ -102,21 +103,20 @@ template<uintptr_t PINx_ADDR, uint8_t PIN_MASK>
 uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::SampleOnce(void) {
   uint8_t count = 0;
 
-#ifdef SINGLE_PIN_CAPACITIVE_SENSE_BLOCK_IRQ
+#if SINGLE_PIN_CAPACITIVE_SENSE_BLOCK_IRQ == 1
   noInterrupts();
 #endif
   *((volatile uint8_t *)PINx_ADDR+1) &= ~PIN_MASK; // DDRx Set direction to input
   *((volatile uint8_t *)PINx_ADDR+2) |= PIN_MASK;  // PORTx Enable pull-up
 
-  // Hardcoding few tests without checking for the timeout
-#ifdef SINGLE_PIN_CAPACITIVE_SENSE_BLOCK_IRQ  
-  interrupts();
-#endif
-  
   while ( !(*((volatile uint8_t *)PINx_ADDR) & PIN_MASK) && count < SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT )  { 
     // Read PINx input and counting how long it took to charge
     count++;
   }
+
+#if SINGLE_PIN_CAPACITIVE_SENSE_BLOCK_IRQ == 1
+  interrupts();
+#endif
 
   this->SampleCleanup();
 

@@ -23,12 +23,12 @@ constexpr uintptr_t PortD() {
   return (uintptr_t)&PIND;
 }
 
-SinglePinCapacitiveSense<PortD(), 4>  capacitivePin2;  // Pin2 = PortD & mask 4
-SinglePinCapacitiveSense<PortD(), 8>  capacitivePin3;  // Pin3 = PortD & mask 8
-SinglePinCapacitiveSense<PortD(), 16> capacitivePin4;  // Pin4 = PortD & mask 16
+SinglePinCapacitiveSense<PortD(), 1 << 2> sensePin2;  // Pin2 = PortD & mask 4
+SinglePinCapacitiveSense<PortD(), 1 << 3> sensePin3;  // Pin3 = PortD & mask 8
+SinglePinCapacitiveSense<PortD(), 1 << 4> sensePin4;  // Pin4 = PortD & mask 16
 
-// If the defaults are not enough, suply own samples/pressThreshold:
-// SinglePinCapacitiveSense<(uintptr_t)&PIND, 4> capacitivePin2(5, 15);
+// If the defaults are not enough, supply own samples/pressThreshold:
+// SinglePinCapacitiveSense<(uintptr_t)&PIND, 4> sensePin2(5, 15);
 
 // SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>(uint8_t samples, uint16_t
 // pressThreshold); SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>(uint8_t
@@ -42,17 +42,17 @@ SinglePinCapacitiveSense<PortD(), 16> capacitivePin4;  // Pin4 = PortD & mask 16
 // Arduino pin.
 
 bool isPinsConfigValid() {
-  // Check if Arduino pin 2 coresponds to the values in our capacitivePin2
-  Serial.print("Config for capacitivePin2:");
-  if (!capacitivePin2.IsValidConfig(2)) return false;
+  // Check if Arduino pin 2 coresponds to the values in our sensePin2
+  Serial.print("Config for sensePin2:");
+  if (!sensePin2.IsValidConfig(2)) return false;
 
-  // Check if Arduino pin 3 coresponds to the values in our capacitivePin3
-  Serial.print("Config for capacitivePin3:");
-  if (!capacitivePin3.IsValidConfig(3)) return false;
+  // Check if Arduino pin 3 coresponds to the values in our sensePin3
+  Serial.print("Config for sensePin3:");
+  if (!sensePin3.IsValidConfig(3)) return false;
 
-  // Check if Arduino pin 4 coresponds to the values in our capacitivePin4
-  Serial.print("Config for capacitivePin4:");
-  if (!capacitivePin4.IsValidConfig(4)) return false;
+  // Check if Arduino pin 4 coresponds to the values in our sensePin4
+  Serial.print("Config for sensePin4:");
+  if (!sensePin4.IsValidConfig(4)) return false;
 
   return true;
 }
@@ -79,7 +79,7 @@ void loop() {
   // SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT
   // And it will affect how quickly the calibration.
 
-  if (capacitivePin2.IsPressed() || capacitivePin3.IsPressed() || capacitivePin4.IsPressed()) {
+  if (sensePin2.IsPressed() || sensePin3.IsPressed() || sensePin4.IsPressed()) {
     digitalWrite(LED_BUILTIN, HIGH);
   }
   else {
@@ -87,13 +87,13 @@ void loop() {
   }
 
   Serial.print("Sensor1= \t");
-  Serial.print(capacitivePin2.GetLastMeasurementCalibrated());
+  Serial.print(sensePin2.GetLastMeasurementCalibrated());
 
   Serial.print("\tSensor2= \t");
-  Serial.print(capacitivePin3.GetLastMeasurementCalibrated());
+  Serial.print(sensePin3.GetLastMeasurementCalibrated());
 
   Serial.print("\tSensor3= \t");
-  Serial.print(capacitivePin4.GetLastMeasurementCalibrated());
+  Serial.print(sensePin4.GetLastMeasurementCalibrated());
 
   Serial.println();
 

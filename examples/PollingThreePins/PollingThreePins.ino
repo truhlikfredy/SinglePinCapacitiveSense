@@ -23,8 +23,8 @@ constexpr uintptr_t PortD() {
   return (uintptr_t)&PIND;
 }
 
-SinglePinCapacitiveSense<PortD(), 4> ÿcapacitivePin2;  // Pin2 = PortD & mask 4
-SinglePinCapacitiveSense<PortD(), 8> ÿcapacitivePin3;  // Pin3 = PortD & mask 8
+SinglePinCapacitiveSense<PortD(), 4>  capacitivePin2;  // Pin2 = PortD & mask 4
+SinglePinCapacitiveSense<PortD(), 8>  capacitivePin3;  // Pin3 = PortD & mask 8
 SinglePinCapacitiveSense<PortD(), 16> capacitivePin4;  // Pin4 = PortD & mask 16
 
 // If the defaults are not enough, suply own samples/pressThreshold:

@@ -3,11 +3,26 @@
 
 #include <Arduino.h>
 
+// TODO: Allow external config
 #define SINGLE_PIN_CAPACITIVE_SENSE_BLOCK_IRQ
 
-#define SINGLE_PIN_CAPACITIVE_SENSE_DEFAULT_SAMPLING 50   // How often the pin will get sampled by default
-#define SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT          200  // When the sampler gives up, it needs to be equal or lower than 255 and lower than 65535/sampling
-#define SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT     4    // How many same smallestMeasurement have to be in the row to consider for new measurementOffset (and it will take 4 measurements before any trigger can be detected)
+#ifndef SINGLE_PIN_CAPACITIVE_SENSE_DEFAULT_SAMPLING
+// How often the pin will get sampled by default
+#define SINGLE_PIN_CAPACITIVE_SENSE_DEFAULT_SAMPLING 50
+#endif
+
+#ifndef SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT
+// When the sampler gives up, it needs to be equal or lower than 255 and lower
+// than 65535/sampling
+#define SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT          200
+#endif
+
+#ifdef SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT
+// How many same smallestMeasurement have to be in the row to consider for new
+// measurementOffset (and it will take 4 measurements before any trigger can be
+// detected)
+#define SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT     4    
+#endif
 
 
 // The class implementation and declaration have are in the same header because it's a templated class
@@ -158,6 +173,7 @@ bool SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::IsPressed(void) {
   this->SampleAllSamples();
   
   if (this->measurementOffset == UINT16_MAX) {
+    // If the pin is still calibrating, do not trigger any presses
     return false;
   } else {
     return  this->lastMeasurement >= (this->pressThreshold + this->measurementOffset) ? true : false;  
@@ -174,6 +190,8 @@ uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::GetLastMeasurementRaw(vo
 template<uintptr_t PINx_ADDR, uint8_t PIN_MASK>
 uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::GetLastMeasurementCalibrated(void) {
   if (this->lastMeasurement < this->measurementOffset) {
+    // If the measured value is below our expected minimim, then do not return
+    // negative value and just return no press. (return type is unsigned anyway)
     return 0;
   } else {
     return this->lastMeasurement - this->measurementOffset;  
@@ -202,6 +220,7 @@ bool SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::IsValidConfig(uint8_t arduin
     status = false;
   }
 
+  // Both address and mask passed
   if (status) {
     Serial.print(" OK");
   }

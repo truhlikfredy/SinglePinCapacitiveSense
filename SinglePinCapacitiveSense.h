@@ -16,7 +16,7 @@
 
 #ifndef SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT
 // When the sampler gives up, it needs to be equal or lower than 255 and lower
-// than 65535/sampling
+// than 65535/sampling (if SPC_VAL uint16_t is used)
 #define SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT          200
 #endif
 
@@ -27,6 +27,11 @@
 #define SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT     4    
 #endif
 
+#ifndef SPC_VAL
+// Decide what type the cumulative value will have, if taking small measurements
+// and using low sampling count then uint16_t might be used
+#define SPC_VAL uint32_t
+#endif
 
 // The class implementation and declaration have are in the same header because it's a templated class
 
@@ -38,18 +43,18 @@ class SinglePinCapacitiveSense {
     SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>();
     
     bool     IsValidConfig(uint8_t arduinoPin);  // Check if the hard-coded values match with the Arduino pin values
-    uint16_t SampleAllSamples(void);             // Just do a measurement of all this->samples samples
+    SPC_VAL  SampleAllSamples(void);             // Just do a measurement of all this->samples samples
     bool     IsPressed(void);                    // Do measurement and decided if the sensor was pressed or not
-    uint16_t GetLastMeasurementRaw(void);        // Return the value as measured
-    uint16_t GetLastMeasurementCalibrated(void); // Return the measured value - the measurementOffset (primitive high-pass filtering)
+    SPC_VAL  GetLastMeasurementRaw(void);        // Return the value as measured
+    SPC_VAL  GetLastMeasurementCalibrated(void); // Return the measured value - the measurementOffset (primitive high-pass filtering)
     void     Calibrate(void);                    // To reset the measurementOffset (normally invoked from the constructor)
     
   private:
     uint8_t  samples;                            // How many samples to make
     uint16_t pressThreshold;                     // How much the measurement has to be above the smallestMeasurement to count as press
-    uint16_t lastMeasurement;                    // Hold value of the last measurement done
-    uint16_t measurementOffset;                  // Keep track what was the smallest measurement which was measured consistently for many measurements
-    uint16_t smallestMeasurement;                // Keep track what was the smallest measurement done so far (to calculated the GetLastMeasurementCalibrated()
+    SPC_VAL  lastMeasurement;                    // Hold value of the last measurement done
+    SPC_VAL  measurementOffset;                  // Keep track what was the smallest measurement which was measured consistently for many measurements
+    SPC_VAL  smallestMeasurement;                // Keep track what was the smallest measurement done so far (to calculated the GetLastMeasurementCalibrated()
     uint8_t  smallestMeasurementStreak;          // How many of last measurements in the row were same as the smallest measurement
 
     void     ConstructorCommon(void);            // Prepare the pin and fields to expected state
@@ -140,7 +145,7 @@ void SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::SampleCleanup(void) {
 
 
 template<uintptr_t PINx_ADDR, uint8_t PIN_MASK>
-uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::SampleAllSamples(void) {
+SPC_VAL SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::SampleAllSamples(void) {
   this->lastMeasurement = 0;
   
   for (uint8_t sample=0; sample < this->samples; sample++) {
@@ -178,19 +183,24 @@ bool SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::IsPressed(void) {
     // If the pin is still calibrating, do not trigger any presses
     return false;
   } else {
-    return  this->lastMeasurement >= (this->pressThreshold + this->measurementOffset) ? true : false;  
+
+    if (this->lastMeasurement >= (this->pressThreshold + this->measurementOffset)) {
+      return true;
+    } else {
+      return false;
+    }
   }
 }
 
 
 template<uintptr_t PINx_ADDR, uint8_t PIN_MASK>
-uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::GetLastMeasurementRaw(void) {
+SPC_VAL SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::GetLastMeasurementRaw(void) {
   return this->lastMeasurement;
 }
 
 
 template<uintptr_t PINx_ADDR, uint8_t PIN_MASK>
-uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::GetLastMeasurementCalibrated(void) {
+SPC_VAL SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::GetLastMeasurementCalibrated(void) {
   if (this->lastMeasurement < this->measurementOffset) {
     // If the measured value is below our expected minimim, then do not return
     // negative value and just return no press. (return type is unsigned anyway)

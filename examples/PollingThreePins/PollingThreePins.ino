@@ -20,11 +20,11 @@
 // This is to work around "because it is not the address of a variable" error
 // where template argument is refused because it's not a pointer to a variable.
 constexpr uintptr_t PortD() {
-    return (uintptr_t)&PIND;
+  return (uintptr_t)&PIND;
 }
 
-SinglePinCapacitiveSense<PortD(), 4>  capacitivePin2;  // Pin2 = PortD & mask 4
-SinglePinCapacitiveSense<PortD(), 8>  capacitivePin3;  // Pin3 = PortD & mask 8
+SinglePinCapacitiveSense<PortD(), 4>  capacitivePin2;  // Pin2 = PortD & mask 4
+SinglePinCapacitiveSense<PortD(), 8>  capacitivePin3;  // Pin3 = PortD & mask 8
 SinglePinCapacitiveSense<PortD(), 16> capacitivePin4;  // Pin4 = PortD & mask 16
 
 // If the defaults are not enough, suply own samples/pressThreshold:
@@ -42,65 +42,60 @@ SinglePinCapacitiveSense<PortD(), 16> capacitivePin4;  // Pin4 = PortD & mask 16
 // Arduino pin.
 
 bool isPinsConfigValid() {
-     // Check if Arduino pin 2 coresponds to the values in our capacitivePin2
-  Serial.print("Config for capacitivePin2:");
-    if (!capacitivePin2.IsValidConfig(2)) return false;
+  // Check if Arduino pin 2 coresponds to the values in our capacitivePin2
+  Serial.print("Config for capacitivePin2:");
+  if (!capacitivePin2.IsValidConfig(2)) return false;
 
-     // Check if Arduino pin 3 coresponds to the values in our capacitivePin3
-  Serial.print("Config for capacitivePin3:");
-    if (!capacitivePin3.IsValidConfig(3)) return false;
+  // Check if Arduino pin 3 coresponds to the values in our capacitivePin3
+  Serial.print("Config for capacitivePin3:");
+  if (!capacitivePin3.IsValidConfig(3)) return false;
 
-     // Check if Arduino pin 4 coresponds to the values in our capacitivePin4
-  Serial.print("Config for capacitivePin4:");
-    if (!capacitivePin4.IsValidConfig(4)) return false;
+  // Check if Arduino pin 4 coresponds to the values in our capacitivePin4
+  Serial.print("Config for capacitivePin4:");
+  if (!capacitivePin4.IsValidConfig(4)) return false;
 
-    return true;
+  return true;
 }
 
 void setup() {
-    pinMode(LED_BUILTIN, OUTPUT);
-   
-  digitalWrite(LED_BUILTIN, LOW);
-    
-  Serial.begin(9600);
+  pinMode(LED_BUILTIN, OUTPUT);
 
-     // Only needed when switching between different boards to make sure the,
-   // base address and mask did not change, remove for production builds.
-  if (!isPinsConfigValid()) {
-         // If the pins are not configured correctly do not continue, check
-     // if the desired pin has correct address/mask.
-    while (1);
-     
+  digitalWrite(LED_BUILTIN, LOW);
+
+  Serial.begin(9600);
+
+  // Only needed when switching between different boards to make sure the,
+  // base address and mask did not change, remove for production builds.
+  if (!isPinsConfigValid()) {
+    // If the pins are not configured correctly do not continue, check
+    // if the desired pin has correct address/mask.
+    while (1);
   }
 }
 
 void loop() {
-     // For the first 4 iterations of this loop, the sense will not trigger as they
-   // are calibrating, this can be changed with define:
-   // SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT
-   // And it will affect how quickly the calibration.
+  // For the first 4 iterations of this loop, the sense will not trigger as they
+  // are calibrating, this can be changed with define:
+  // SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT
+  // And it will affect how quickly the calibration.
 
-  if (capacitivePin2.IsPressed() || capacitivePin3.IsPressed() ||
-       capacitivePin4.IsPressed()) {
-        digitalWrite(LED_BUILTIN, HIGH);
-     
+  if (capacitivePin2.IsPressed() || capacitivePin3.IsPressed() || capacitivePin4.IsPressed()) {
+    digitalWrite(LED_BUILTIN, HIGH);
   }
   else {
-         
-    digitalWrite(LED_BUILTIN, LOW);
-     
+    digitalWrite(LED_BUILTIN, LOW);
   }
 
-    Serial.print("Sensor1= \t");
-    Serial.print(capacitivePin2.GetLastMeasurementCalibrated());
-    
-  Serial.print("\tSensor2= \t");
-    Serial.print(capacitivePin3.GetLastMeasurementCalibrated());
+  Serial.print("Sensor1= \t");
+  Serial.print(capacitivePin2.GetLastMeasurementCalibrated());
 
-    Serial.print("\tSensor3= \t");
-    Serial.print(capacitivePin4.GetLastMeasurementCalibrated());
-    
-  Serial.println();
-    
-  delay(50);  // The delay can be completely removed if needed
+  Serial.print("\tSensor2= \t");
+  Serial.print(capacitivePin3.GetLastMeasurementCalibrated());
+
+  Serial.print("\tSensor3= \t");
+  Serial.print(capacitivePin4.GetLastMeasurementCalibrated());
+
+  Serial.println();
+
+  delay(50);  // The delay can be completely removed if needed
 }

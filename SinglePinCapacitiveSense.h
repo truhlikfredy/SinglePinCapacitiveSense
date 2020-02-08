@@ -17,7 +17,7 @@
 #define SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT          200
 #endif
 
-#ifdef SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT
+#ifndef SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT
 // How many same smallestMeasurement have to be in the row to consider for new
 // measurementOffset (and it will take 4 measurements before any trigger can be
 // detected)

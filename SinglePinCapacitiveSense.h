@@ -231,26 +231,27 @@ uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SampleOnce(void) {
     "end%=:"
 
 
-    : [reg0]  "=r"(b0), 
-      [reg1]  "=r"(b1),
-      [reg2]  "=r"(b2),
-      [reg3]  "=r"(b3),
-      [reg4]  "=r"(b4),
-      [reg5]  "=r"(b5),
-      [reg6]  "=r"(b6),
-      [reg7]  "=r"(b7),
-      [reg8]  "=r"(b8),
-      [reg9]  "=r"(b9),
-      [reg10] "=r"(b10),
-      [reg11] "=r"(b11),
-      [reg12] "=r"(b12),
-      [reg13] "=r"(b13),
-      [reg14] "=r"(b14),
-      [major] "+d"(major),    // Have to use 'd' because I want to use CPI which only works on higher 16 registers
-      [minor] "+r"(minor)
-    : [addr]  "I"(PINx_ADDR - __SFR_OFFSET), // Same effect as _SFR_IO_ADDR(PINx_ADDR), changing absolute address to IO address
-      [bit]   "I"(PIN_BIT),
-      [major_max] "M"(SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT)
+    : [reg0]      "=r"(b0), 
+      [reg1]      "=r"(b1),
+      [reg2]      "=r"(b2),
+      [reg3]      "=r"(b3),
+      [reg4]      "=r"(b4),
+      [reg5]      "=r"(b5),
+      [reg6]      "=r"(b6),
+      [reg7]      "=r"(b7),
+      [reg8]      "=r"(b8),
+      [reg9]      "=r"(b9),
+      [reg10]     "=r"(b10),
+      [reg11]     "=r"(b11),
+      [reg12]     "=r"(b12),
+      [reg13]     "=r"(b13),
+      [reg14]     "=r"(b14),
+      [major]     "+d"(major), // Have to use 'd' because I want to use CPI which only works on higher 16 registers
+      [minor]     "+r"(minor)  // Need + read/write for minor counter, but 'r' is enough for INC instruction
+
+    : [addr]      "I"(PINx_ADDR - __SFR_OFFSET),           // Same effect as _SFR_IO_ADDR(PINx_ADDR), changing absolute address to IO address
+      [bit]       "I"(PIN_BIT),                            // 0..63 immediate is enough for a bit position
+      [major_max] "M"(SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT) // Needed 0..255 immediate for this constant
   );
 
 #if SINGLE_PIN_CAPACITIVE_SENSE_BLOCK_IRQ == 1
@@ -259,7 +260,7 @@ uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SampleOnce(void) {
 
   this->SampleCleanup();
 
-  return major << 4 | minor;
+  return major << 4 | minor; // Minor counter is 0-15 so the major has to shift only by 4 bits
 }
 
 

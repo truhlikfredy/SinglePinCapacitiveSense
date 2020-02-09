@@ -18,6 +18,7 @@
 - Depends on a fast clock, tested on **16MHz**, this **could be improved** and the performance still can be better and should be possible to support lower clocks.
 - Because the C++ templates are used the code size will increase when more sensors are created.
 - Will not work on non-AVR Arduinos (if needed I could make ports).
+- Will not work well on IRQ heavy applications. To remedy the sensing can block IRQs `#define SINGLE_PIN_CAPACITIVE_SENSE_BLOCK_IRQ 1`
 
 # Tested devices
 
@@ -53,8 +54,28 @@ With hard-coded approach the compiler can see few things:
 
 # References
 
+## Capacitive touch
+
 https://en.wikipedia.org/wiki/Capacitive_sensing
+
+## AVR
 
 http://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7810-Automotive-Microcontrollers-ATmega328P_Datasheet.pdf
 
 https://www.arduino.cc/en/Reference/PortManipulation
+
+https://garretlab.web.fc2.com/en/arduino/inside/hardware/arduino/avr/cores/arduino/Arduino.h/digitalPinToBitMask.html
+
+## ASM in C
+
+https://www.microchip.com/webdoc/AVRLibcReferenceManual/inline_asm_1gcc_asm.html
+
+https://www.microchip.com/webdoc/AVRLibcReferenceManual/inline_asm_1io_ops.html
+
+http://www.ethernut.de/en/documents/arm-inline-asm.html
+
+https://stackoverflow.com/questions/3898435
+
+## C++ templating
+
+https://stackoverflow.com/questions/37303968

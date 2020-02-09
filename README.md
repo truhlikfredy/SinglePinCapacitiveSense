@@ -42,21 +42,26 @@ Note: To see the CI build logs, visit the [Travis-CI](https://travis-ci.org/truh
 
 The following defines can be configured before including the SinglePinCapacitiveSense.h
 
+
 To specify what type will be used for the total sum variables and return types.If left undefined then it will be auto-detected with taking SINGLE_PIN_CAPACITIVE_SENSE_DEFAULT_SAMPLING and SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT into consideration:
 
 `#define SPC_VAL uint32_t`
+
 
 To block all IRQs while sampling:
 
 `#define SINGLE_PIN_CAPACITIVE_SENSE_BLOCK_IRQ 1`
 
+
 How many times the sensor will be sampled (when constructor arguments are left to default), this value is used to calculate if the total sum value will fit into a uint16_t type or uint32_t has to be used. Therefore if sampling in a constructor is used with much higher value, then either specify SPC_VAL by hand or updatethis sampling define so then the SPC_VAL will be detected correctly:
 
 `#define SINGLE_PIN_CAPACITIVE_SENSE_DEFAULT_SAMPLING 16`
 
+
 To change how many sets of the 16 micro samples have to be taken before the capacitance considered too high and sampling aborted as an error (non-touched result). Has to be lower than 255 and it shouldn't be too low because even untouched pin might take some time to get passed by the sampler:
 
 `#define SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT 254`
+
 
 When calibrating the inputs to detect what is the lowest noise level, how many of these have to be returned in the row to consider the global minimum and not some intermittent temporary local minimum/noise. This will make the first X iteration of the touch sensing ineffective as the sensor will be calibrating itself:
 
@@ -84,11 +89,11 @@ Because the code can't be generic, the PORT address and pin have to be hardcoded
 
 With hard-coded approach the compiler can see few things:
 
-  - The pin/mask is actually one-hot schema and this can be detected by the compiler, instead of testing value with the immediate AND (ANDI) it can be tested directly by a bit set/clear test as the AVR has instructions to test specific bits.
+- The pin/mask is actually one-hot schema and this can be detected by the compiler, instead of testing value with the immediate AND (ANDI) it can be tested directly by a bit set/clear test as the AVR has instructions to test specific bits.
 
-  - That the PORT pointer is not regular 16-bit pointer, for lower address regions there are instructions with I/O direct addressing, for 6-bit addresses (0x20 - 0x5F) there is input (IN) instruction where the address is part of the OP-code and there is no need to use the 16-bit register pairs, it loads the content into a register and with ANDI mask can be tested for the bit. However, for the even lower 5-bit region (0x20 - 0x3F) there are instructions (SBIC/SBIS) that can test for a specific bit is set/clear without even loading the content into a register or needing to invoke ANDI. Not just this combines two steps into one, but both address and bit location are direct and are part of the OP-code, so no need to load registers with the address and bit. 
-  
-  - Because the compiler knows in advance that the desired port is in the **I/O 5-bit** region and that the mask is **one-hot**, it can effectively utilize the **SBIC** / **SBIS** instructions and drastically speed up the runtime execution, which so essential for this approach to work. And wouldn't be possible if the code would have to be generic and work with any mask and pointer. It's cleaner as well, everything needed is contained in the instruction and doesn't require any other registers to be populated. Now 15 samples are taken with IN instruction into registers and the 16th with SBIS (if it fails only then the previously 15 samples are analyzed, but then the speed doesn't matter). Overflow counter checking is done between the IN samples (~1 extra instruction between 4 sampling instructions).
+- That the PORT pointer is not regular 16-bit pointer, for lower address regions there are instructions with I/O direct addressing, for 6-bit addresses (0x20 - 0x5F) there is input (IN) instruction where the address is part of the OP-code and there is no need to use the 16-bit register pairs, it loads the content into a register and with ANDI mask can be tested for the bit. However, for the even lower 5-bit region (0x20 - 0x3F) there are instructions (SBIC/SBIS) that can test for a specific bit is set/clear without even loading the content into a register or needing to invoke ANDI. Not just this combines two steps into one, but both address and bit location are direct and are part of the OP-code, so no need to load registers with the address and bit. 
+
+- Because the compiler knows in advance that the desired port is in the **I/O 5-bit** region and that the mask is **one-hot**, it can effectively utilize the **SBIC** / **SBIS** instructions and drastically speed up the runtime execution, which so essential for this approach to work. And wouldn't be possible if the code would have to be generic and work with any mask and pointer. It's cleaner as well, everything needed is contained in the instruction and doesn't require any other registers to be populated. Now 15 samples are taken with IN instruction into registers and the 16th with SBIS (if it fails only then the previously 15 samples are analyzed, but then the speed doesn't matter). Overflow counter checking is done between the IN samples (~1 extra instruction between 4 sampling instructions).
 
 # References
 

@@ -86,13 +86,14 @@ void setup() {
 
 
 void loop() {
-  // For the first 6 iterations of this loop, the sense will not trigger as they
+  // For the first 8 iterations of this loop, the sense will not trigger as they
   // are calibrating, this can be changed with define:
   // SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT
   // And it will affect how quickly the calibration.
 
   static uint8_t count = 0;
 
+  // If any of these capacitive sensors is pressed then light up the LED
   if (sensePin2.IsPressed() || sensePin3.IsPressed() || sensePin4.IsPressed()) {
     digitalWrite(LED_BUILTIN, HIGH);
   }
@@ -100,8 +101,8 @@ void loop() {
     digitalWrite(LED_BUILTIN, LOW);
   }
 
-  if ((count % 8) == 0) {
-    // Update the UART 8x less often, allows LED to be refreshed more often
+  if ((count % 4) == 0) {
+    // Update the UART 4x less often, allows LED to be refreshed more often
     // without hammering the UART with so many messages
     
     Serial.print("Sensor1= \t");
@@ -117,5 +118,5 @@ void loop() {
   }
 
   count++;
-  delay(10);  // The delay can be completely removed if needed
+  delay(20);  // The delay can be completely removed if needed
 }

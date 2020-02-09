@@ -11,21 +11,21 @@
 
 #ifndef SINGLE_PIN_CAPACITIVE_SENSE_DEFAULT_SAMPLING
 // How often the pin will get sampled by default
-#define SINGLE_PIN_CAPACITIVE_SENSE_DEFAULT_SAMPLING 15
+#define SINGLE_PIN_CAPACITIVE_SENSE_DEFAULT_SAMPLING 16
 #endif
 
 #ifndef SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT
 // When the sampler gives up, it needs to be equal or lower than 255 and lower
 // than 65535/sampling (if SPC_VAL uint16_t is used). Giving it value too low
 // might disregard genuine presses
-#define SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT          240
+#define SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT          254
 #endif
 
 #ifndef SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT
 // How many same smallestMeasurement have to be in the row to consider for new
 // measurementOffset (and it will take 4 measurements before any trigger can be
 // detected)
-#define SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT     4    
+#define SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT     6    
 #endif
 
 #ifndef SPC_VAL
@@ -100,8 +100,8 @@ SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SinglePinCapacitiveSense() {
 template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
 void SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::ConstructorCommon(void) {
   this->Calibrate();
-  *((volatile uint8_t *)PINx_ADDR+1) |= PIN_BIT;  // DDRx  Switch to output
-  *((volatile uint8_t *)PINx_ADDR+2) &= ~PIN_BIT; // PORTx Output will be LOW
+  *((volatile uint8_t *)PINx_ADDR+1) |=   1 << PIN_BIT;  // DDRx  Switch to output
+  *((volatile uint8_t *)PINx_ADDR+2) &= ~(1 << PIN_BIT); // PORTx Output will be LOW
 }
 
 
@@ -124,8 +124,8 @@ uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SampleOnce(void) {
 #endif
 
   // Should be safe even if IRQ happened between these two lines
-  *((volatile uint8_t *)PINx_ADDR+1) &= ~PIN_BIT; // DDRx Set direction to input
-  *((volatile uint8_t *)PINx_ADDR+2) |= PIN_BIT;  // PORTx Enable pull-up
+  *((volatile uint8_t *)PINx_ADDR+1) &= ~(1 << PIN_BIT); // DDRx Set direction to input
+  *((volatile uint8_t *)PINx_ADDR+2) |= (1 << PIN_BIT);  // PORTx Enable pull-up
 
   // Reserve 15 registers as buffer
   uint8_t b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14;
@@ -156,7 +156,7 @@ uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SampleOnce(void) {
     "in %[reg9],   %[addr] \n\t"  
     "in %[reg10],  %[addr] \n\t"
     "in %[reg11],  %[addr] \n\t"
-    "brcs timeout%= \n\t"              // Branch if carry set (major > SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT)
+    "brcc timeout%= \n\t"              // Branch if carry cleared (major > SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT)
     "in %[reg12],  %[addr] \n\t"
     "in %[reg13],  %[addr] \n\t"
     "in %[reg14],  %[addr] \n\t"
@@ -266,8 +266,8 @@ void SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SampleCleanup(void) {
   
   // Pulling down the residual capacity by setting pin to output low
   // and waiting a moment to make sure it's drained. Should be safe even if IRQ happened in the middle
-  *((volatile uint8_t *)PINx_ADDR+2) &= ~PIN_BIT; // PORTx Disable pull-up input (output will be LOW)
-  *((volatile uint8_t *)PINx_ADDR+1) |= PIN_BIT;  // DDRx  Switch from input to output
+  *((volatile uint8_t *)PINx_ADDR+2) &= ~(1 << PIN_BIT); // PORTx Disable pull-up input (output will be LOW)
+  *((volatile uint8_t *)PINx_ADDR+1) |= (1 << PIN_BIT);  // DDRx  Switch from input to output
 }
 
 

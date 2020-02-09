@@ -11,7 +11,7 @@
 
 #ifndef SINGLE_PIN_CAPACITIVE_SENSE_DEFAULT_SAMPLING
 // How often the pin will get sampled by default
-#define SINGLE_PIN_CAPACITIVE_SENSE_DEFAULT_SAMPLING 50
+#define SINGLE_PIN_CAPACITIVE_SENSE_DEFAULT_SAMPLING 15
 #endif
 
 #ifndef SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT
@@ -30,8 +30,14 @@
 
 #ifndef SPC_VAL
 // Decide what type the cumulative value will have, if taking small measurements
-// and using low sampling count then uint16_t might be used
-#define SPC_VAL uint32_t
+// and using low sampling count then uint16_t might be used. It will try to detect
+// if 16-bit unsigned int is enough, or 32-bit has to be used.
+#if (16 * SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT * SINGLE_PIN_CAPACITIVE_SENSE_DEFAULT_SAMPLING) > UINT16_MAX
+#define SPC_VAL uint32_t // It might not fit into 16-bit so use 32-bit
+#else
+#define SPC_VAL uint16_t // Worst case scenario should fit into the 16-bit
+#endif
+
 #endif
 
 // The class implementation and declaration have are in the same header because it's a templated class

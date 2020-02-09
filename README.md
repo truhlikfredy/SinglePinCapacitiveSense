@@ -12,6 +12,7 @@
 - **Hand-crafted assembly** sampler is very optimised.
 - It should be faster than the 2-pin or ADC method. Capable to capture up to 4080 samples with performance of **1.3 clock per sample**!
 - Allows to be tweaked from the constructors and from the defines as well.
+- If small enough samples iterations are used then on compile time it will be **auto-detected** and the return types and internal variables can **shrink** from uint32_t to uint16_t (making footprint )
 
 # Disadvantages
 

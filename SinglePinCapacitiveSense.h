@@ -100,8 +100,10 @@ SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SinglePinCapacitiveSense() {
 template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
 void SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::ConstructorCommon(void) {
   this->Calibrate();
+
+  // Should be safe even if IRQ happened between these two lines
+  *((volatile uint8_t *)PINx_ADDR+2) &= ~(1 << PIN_BIT); // PORTx Output will be LOW (Input to High-Z)
   *((volatile uint8_t *)PINx_ADDR+1) |=   1 << PIN_BIT;  // DDRx  Switch to output
-  *((volatile uint8_t *)PINx_ADDR+2) &= ~(1 << PIN_BIT); // PORTx Output will be LOW
 }
 
 

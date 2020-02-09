@@ -66,28 +66,28 @@ With hard-coded approach the compiler can see few things:
 
 ## Capacitive touch
 
-https://en.wikipedia.org/wiki/Capacitive_sensing
+[https://en.wikipedia.org/wiki/Capacitive_sensing](https://en.wikipedia.org/wiki/Capacitive_sensing)
 
 ## AVR
 
-http://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7810-Automotive-Microcontrollers-ATmega328P_Datasheet.pdf
+[http://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7810-Automotive-Microcontrollers-ATmega328P_Datasheet.pdf](http://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7810-Automotive-Microcontrollers-ATmega328P_Datasheet.pdf)
 
-https://www.arduino.cc/en/Reference/PortManipulation
+[https://www.arduino.cc/en/Reference/PortManipulation](https://www.arduino.cc/en/Reference/PortManipulation)
 
-https://garretlab.web.fc2.com/en/arduino/inside/hardware/arduino/avr/cores/arduino/Arduino.h/digitalPinToBitMask.html
+[https://garretlab.web.fc2.com/en/arduino/inside/hardware/arduino/avr/cores/arduino/Arduino.h/digitalPinToBitMask.html](https://garretlab.web.fc2.com/en/arduino/inside/hardware/arduino/avr/cores/arduino/Arduino.h/digitalPinToBitMask.html)
 
-http://ww1.microchip.com/downloads/en/devicedoc/atmel-0856-avr-instruction-set-manual.pdf
+[http://ww1.microchip.com/downloads/en/devicedoc/atmel-0856-avr-instruction-set-manual.pdf](http://ww1.microchip.com/downloads/en/devicedoc/atmel-0856-avr-instruction-set-manual.pdf)
 
 ## ASM in C
 
-https://www.microchip.com/webdoc/AVRLibcReferenceManual/inline_asm_1gcc_asm.html
+[https://www.microchip.com/webdoc/AVRLibcReferenceManual/inline_asm_1gcc_asm.html](https://www.microchip.com/webdoc/AVRLibcReferenceManual/inline_asm_1gcc_asm.html)
 
-https://www.microchip.com/webdoc/AVRLibcReferenceManual/inline_asm_1io_ops.html
+[https://www.microchip.com/webdoc/AVRLibcReferenceManual/inline_asm_1io_ops.html](https://www.microchip.com/webdoc/AVRLibcReferenceManual/inline_asm_1io_ops.html)
 
-http://www.ethernut.de/en/documents/arm-inline-asm.html
+[http://www.ethernut.de/en/documents/arm-inline-asm.html](http://www.ethernut.de/en/documents/arm-inline-asm.html)
 
-https://stackoverflow.com/questions/3898435
+[https://stackoverflow.com/questions/3898435](https://stackoverflow.com/questions/3898435)
 
 ## C++ templating
 
-https://stackoverflow.com/questions/37303968
+[https://stackoverflow.com/questions/37303968](https://stackoverflow.com/questions/37303968)

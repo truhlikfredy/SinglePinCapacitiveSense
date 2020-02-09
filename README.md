@@ -38,6 +38,30 @@
 Note: To see the CI build logs, visit the [Travis-CI](https://travis-ci.org/truhlikfredy/SinglePinCapacitiveSense) website.
 
 
+# Defines
+
+The following defines can be configured before including the SinglePinCapacitiveSense.h
+
+To specify what type will be used for the total sum variables and return types.If left undefined then it will be auto-detected with taking SINGLE_PIN_CAPACITIVE_SENSE_DEFAULT_SAMPLING and SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT into consideration:
+
+`#define SPC_VAL uint32_t`
+
+To block all IRQs while sampling:
+
+`#define SINGLE_PIN_CAPACITIVE_SENSE_BLOCK_IRQ 1`
+
+How many times the sensor will be sampled (when constructor arguments are left to default), this value is used to calculate if the total sum value will fit into a uint16_t type or uint32_t has to be used. Therefore if sampling in a constructor is used with much higher value, then either specify SPC_VAL by hand or updatethis sampling define so then the SPC_VAL will be detected correctly:
+
+`#define SINGLE_PIN_CAPACITIVE_SENSE_DEFAULT_SAMPLING 16`
+
+To change how many sets of the 16 micro samples have to be taken before the capacitance considered too high and sampling aborted as an error (non-touched result). Has to be lower than 255 and it shouldn't be too low because even untouched pin might take some time to get passed by the sampler:
+
+`#define SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT 254`
+
+When calibrating the inputs to detect what is the lowest noise level, how many of these have to be returned in the row to consider the global minimum and not some intermittent temporary local minimum/noise. This will make the first X iteration of the touch sensing ineffective as the sensor will be calibrating itself:
+
+`#define SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT 8`
+
 # How this works
 
 Typically the capacitive sensing forms a small capacitor between the sensor and the finger, charging (and discharging) it while measuring the time (or voltage) can estimate the capacitance and from that figure out that a press has happened. Because area and distance can affect capacitance, therefore pressing harder on the surface can increase the capacity and the strength can be detected as well. Microchip's Atmel Qtouch has dedicated HW pins and has good accuracy and sensitivity, but this HW feature is not present everywhere. There is SW QTouch support with as well, but for limited targets. And then there are Arduino libraries implementing this in software, either depending on ADC pin, or 2-pins with an external resistor. This library takes the 2-pin approach, but instead of using separate sending pin with a large resistor, the pin is setup to INPUT and an internal pull-up resistor is enabled. See the unmarked resistor on the left side of the pin's diagram:
@@ -95,3 +119,5 @@ With hard-coded approach the compiler can see few things:
 ## C++ templating
 
 [https://stackoverflow.com/questions/37303968](https://stackoverflow.com/questions/37303968)
+
+[https://stackoverflow.com/questions/115703](https://stackoverflow.com/questions/115703)

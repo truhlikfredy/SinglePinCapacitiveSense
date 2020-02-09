@@ -21,21 +21,23 @@
 
 // This is to work around "because it is not the address of a variable" error
 // where template argument is refused because it's not a pointer to a variable.
+// https://stackoverflow.com/questions/37303968
 constexpr uintptr_t PortD() {
   return (uintptr_t)&PIND;
 }
 
-SinglePinCapacitiveSense<PortD(), 1 << 2> sensePin2;  // Pin2 = PortD & mask 4
-SinglePinCapacitiveSense<PortD(), 1 << 3> sensePin3;  // Pin3 = PortD & mask 8
-SinglePinCapacitiveSense<PortD(), 1 << 4> sensePin4;  // Pin4 = PortD & mask 16
+SinglePinCapacitiveSense<PortD(), 2> sensePin2;  // Arduino Pin2 = AVR PortD2
+SinglePinCapacitiveSense<PortD(), 3> sensePin3;  // Arduino Pin3 = AVR PortD3
+SinglePinCapacitiveSense<PortD(), 4> sensePin4;  // Arduino Pin4 = AVR PortD3
 
 // If the defaults are not enough, supply own samples/pressThreshold:
-// SinglePinCapacitiveSense<(uintptr_t)&PIND, 4> sensePin2(5, 15);
+// SinglePinCapacitiveSense<PortD(), 2> sensePin2(5, 15);
 
-// SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>(uint8_t samples, uint16_t
-// pressThreshold); SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>(uint8_t
-// samples); SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>();
+// SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>(uint8_t samples, uint16_t pressThreshold); 
+// SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>(uint8_t samples); 
+// SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>();
 
+// Might not apply to all Arduino AVR devices, but in general should be correct:
 // Usually Arduino pin 0-7 are PORTD, 8-13 PORTB (do not use analogue ports for
 // this). If not exactly knowing how to setup the mask and port address then
 // just make the pin with some estimated values (even wrong ones) and call

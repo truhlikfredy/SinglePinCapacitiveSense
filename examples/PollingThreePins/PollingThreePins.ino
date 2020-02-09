@@ -1,4 +1,13 @@
+// If needed the following defines:
+// SINGLE_PIN_CAPACITIVE_SENSE_BLOCK_IRQ
+// SINGLE_PIN_CAPACITIVE_SENSE_DEFAULT_SAMPLING
+// SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT
+// SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT
+// SPC_VAL
+// Have to be defined before the SinglePinCapacitiveSense.h include
 #include "SinglePinCapacitiveSense.h"
+
+// Copyright 2020 Anton Krug - MIT License
 
 // Whole functionality depends on the internal pull-up resistor, therefore the
 // PUD pull-up-disable has to be off.
@@ -10,30 +19,30 @@
 // it's necessary for performance which is critical in sensing capacitance
 // without external resistor.
 
-// Tested on: Arduino Duemilanove ATmega328 - 16MHz
-
-// Multiple constructors are avaiable, if samples, pressThreshold are not
+// Multiple constructors are available, if samples, pressThreshold are not
 // given then, default values will be used instead (default can be changed
 // with define:
 // SINGLE_PIN_CAPACITIVE_SENSE_DEFAULT_SAMPLING
 
 // This is to work around "because it is not the address of a variable" error
 // where template argument is refused because it's not a pointer to a variable.
+// https://stackoverflow.com/questions/37303968
 constexpr uintptr_t PortD() {
   return (uintptr_t)&PIND;
 }
 
-SinglePinCapacitiveSense<PortD(), 4>  capacitivePin2;  // Pin2 = PortD & mask 4
-SinglePinCapacitiveSense<PortD(), 8>  capacitivePin3;  // Pin3 = PortD & mask 8
-SinglePinCapacitiveSense<PortD(), 16> capacitivePin4;  // Pin4 = PortD & mask 16
+SinglePinCapacitiveSense<PortD(), 2> sensePin2;  // Arduino Pin2 = AVR PortD2
+SinglePinCapacitiveSense<PortD(), 3> sensePin3;  // Arduino Pin3 = AVR PortD3
+SinglePinCapacitiveSense<PortD(), 4> sensePin4;  // Arduino Pin4 = AVR PortD3
 
-// If the defaults are not enough, suply own samples/pressThreshold:
-// SinglePinCapacitiveSense<(uintptr_t)&PIND, 4> capacitivePin2(5, 15);
+// If the defaults are not enough, supply own samples/pressThreshold:
+// SinglePinCapacitiveSense<PortD(), 2> sensePin2(5, 15);
 
-// SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>(uint8_t samples, uint16_t
-// pressThreshold); SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>(uint8_t
-// samples); SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>();
+// SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>(uint8_t samples, uint16_t pressThreshold); 
+// SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>(uint8_t samples); 
+// SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>();
 
+// Might not apply to all Arduino AVR devices, but in general should be correct:
 // Usually Arduino pin 0-7 are PORTD, 8-13 PORTB (do not use analogue ports for
 // this). If not exactly knowing how to setup the mask and port address then
 // just make the pin with some estimated values (even wrong ones) and call
@@ -41,21 +50,23 @@ SinglePinCapacitiveSense<PortD(), 16> capacitivePin4;  // Pin4 = PortD & mask 16
 // they are not correct it will output on the UART what is expected for that
 // Arduino pin.
 
+
 bool isPinsConfigValid() {
-  // Check if Arduino pin 2 coresponds to the values in our capacitivePin2
-  Serial.print("Config for capacitivePin2:");
-  if (!capacitivePin2.IsValidConfig(2)) return false;
+  // Check if Arduino pin 2 coresponds to the values in our sensePin2
+  Serial.print("Config for sensePin2:");
+  if (!sensePin2.IsValidConfig(2)) return false;
 
-  // Check if Arduino pin 3 coresponds to the values in our capacitivePin3
-  Serial.print("Config for capacitivePin3:");
-  if (!capacitivePin3.IsValidConfig(3)) return false;
+  // Check if Arduino pin 3 coresponds to the values in our sensePin3
+  Serial.print("Config for sensePin3:");
+  if (!sensePin3.IsValidConfig(3)) return false;
 
-  // Check if Arduino pin 4 coresponds to the values in our capacitivePin4
-  Serial.print("Config for capacitivePin4:");
-  if (!capacitivePin4.IsValidConfig(4)) return false;
+  // Check if Arduino pin 4 coresponds to the values in our sensePin4
+  Serial.print("Config for sensePin4:");
+  if (!sensePin4.IsValidConfig(4)) return false;
 
   return true;
 }
+
 
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
@@ -73,29 +84,39 @@ void setup() {
   }
 }
 
+
 void loop() {
-  // For the first 4 iterations of this loop, the sense will not trigger as they
+  // For the first 8 iterations of this loop, the sense will not trigger as they
   // are calibrating, this can be changed with define:
   // SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT
   // And it will affect how quickly the calibration.
 
-  if (capacitivePin2.IsPressed() || capacitivePin3.IsPressed() || capacitivePin4.IsPressed()) {
+  static uint8_t count = 0;
+
+  // If any of these capacitive sensors is pressed then light up the LED
+  if (sensePin2.IsPressed() || sensePin3.IsPressed() || sensePin4.IsPressed()) {
     digitalWrite(LED_BUILTIN, HIGH);
   }
   else {
     digitalWrite(LED_BUILTIN, LOW);
   }
 
-  Serial.print("Sensor1= \t");
-  Serial.print(capacitivePin2.GetLastMeasurementCalibrated());
+  if ((count % 4) == 0) {
+    // Update the UART 4x less often, allows LED to be refreshed more often
+    // without hammering the UART with so many messages
+    
+    Serial.print("Sensor1= \t");
+    Serial.print(sensePin2.GetLastMeasurementCalibrated());
 
-  Serial.print("\tSensor2= \t");
-  Serial.print(capacitivePin3.GetLastMeasurementCalibrated());
+    Serial.print("\tSensor2= \t");
+    Serial.print(sensePin3.GetLastMeasurementCalibrated());
 
-  Serial.print("\tSensor3= \t");
-  Serial.print(capacitivePin4.GetLastMeasurementCalibrated());
+    Serial.print("\tSensor3= \t");
+    Serial.print(sensePin4.GetLastMeasurementCalibrated());
 
-  Serial.println();
+    Serial.println();    
+  }
 
-  delay(50);  // The delay can be completely removed if needed
+  count++;
+  delay(20);  // The delay can be completely removed if needed
 }

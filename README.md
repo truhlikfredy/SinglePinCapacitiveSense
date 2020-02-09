@@ -9,19 +9,32 @@
 
 - Requires only **1 digital input** on an AVR.
 - It doesn't require any additional capacitor/resistor, **no external components**.
-- It should be faster than the 2-pin or ADC method.
+- **Hand-crafted assembly** sampler is very optimised.
+- It should be faster than the 2-pin or ADC method. Capable to capture up to 4080 samples with performance of **1.3 clock per sample**!
+- Allows to be tweaked from the constructors and from the defines as well.
+- If small enough samples iterations are used then on compile time it will be **auto-detected** and the return types and internal variables can **shrink** from uint32_t to uint16_t (making footprint )
+- Because v2.0 has much higher sampling speed, it can recognize the **pressure** much more **precisely**.
 
 # Disadvantages
 
 - Because using **internal pull-up** (and there is no pull-down) the sensing is done only on the 'charging' cycle and can't be tested again on the 'discharging' cycle. **No discharge measurement** means some accuracy is lost and this system is more sensitive to noise and environment changes. This pull-up resistance is not specified and could be different between devices.
 - No way to increase the resistance and no way increase the sensitivity, only touch can be detected, **no proximity sensor**
-- Depends on a fast clock, tested on **16MHz**, this **could be improved** and the performance still can be better and should be possible to support lower clocks.
+- Depends on the clock speed, tested on 16MHz, but should work at much lower clocks as now the sampling is very fast.
 - Because the C++ templates are used the code size will increase when more sensors are created.
 - Will not work on non-AVR Arduinos (if needed I could make ports).
+- Will not work well on IRQ heavy applications. To remedy the sensing can block IRQs `#define SINGLE_PIN_CAPACITIVE_SENSE_BLOCK_IRQ 1`
 
 # Tested devices
 
-- Arduino Duemilanova - ATmega328 - 16MHz
+|Board | Build on the CI | Tested on real HW |
+|------|-----------------|----------------|
+|Arduino Duemilanova - ATmega328 - 16MHz | PASS | PASS|
+|Arduino Uno | PASS | Do not have HW to test|
+|Arduino Nano - ATmega328 | PASS | Do not have HW to test|
+|Arduino Mega 2560 | PASS | Do not have HW to test|
+
+Note: To see the CI build logs, visit the [Travis-CI](https://travis-ci.org/truhlikfredy/SinglePinCapacitiveSense) website.
+
 
 # How this works
 
@@ -49,12 +62,34 @@ With hard-coded approach the compiler can see few things:
 
   - That the PORT pointer is not regular 16-bit pointer, for lower address regions there are instructions with I/O direct addressing, for 6-bit addresses (0x20 - 0x5F) there is input (IN) instruction where the address is part of the OP-code and there is no need to use the 16-bit register pairs, it loads the content into a register and with ANDI mask can be tested for the bit. However, for the even lower 5-bit region (0x20 - 0x3F) there are instructions (SBIC/SBIS) that can test for a specific bit is set/clear without even loading the content into a register or needing to invoke ANDI. Not just this combines two steps into one, but both address and bit location are direct and are part of the OP-code, so no need to load registers with the address and bit. 
   
-  - Because the compiler knows in advance that the desired port is in the **I/O 5-bit** region and that the mask is **one-hot**, it can effectively utilize the **SBIC** / **SBIS** instructions and drastically speed up the runtime execution, which so essential for this approach to work. And wouldn't be possible if the code would have to be generic and work with any mask and pointer. It's cleaner as well, everything needed is contained in the instruction and doesn't require any other registers to be populated. Even when this speed is great, I reckon that the sampling rate can be still significantly improved.
+  - Because the compiler knows in advance that the desired port is in the **I/O 5-bit** region and that the mask is **one-hot**, it can effectively utilize the **SBIC** / **SBIS** instructions and drastically speed up the runtime execution, which so essential for this approach to work. And wouldn't be possible if the code would have to be generic and work with any mask and pointer. It's cleaner as well, everything needed is contained in the instruction and doesn't require any other registers to be populated. Now 15 samples are taken with IN instruction into registers and the 16th with SBIS (if it fails only then the previously 15 samples are analyzed, but then the speed doesn't matter). Overflow counter checking is done between the IN samples (~1 extra instruction between 4 sampling instructions).
 
 # References
 
-https://en.wikipedia.org/wiki/Capacitive_sensing
+## Capacitive touch
 
-http://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7810-Automotive-Microcontrollers-ATmega328P_Datasheet.pdf
+[https://en.wikipedia.org/wiki/Capacitive_sensing](https://en.wikipedia.org/wiki/Capacitive_sensing)
 
-https://www.arduino.cc/en/Reference/PortManipulation
+## AVR
+
+[http://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7810-Automotive-Microcontrollers-ATmega328P_Datasheet.pdf](http://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7810-Automotive-Microcontrollers-ATmega328P_Datasheet.pdf)
+
+[https://www.arduino.cc/en/Reference/PortManipulation](https://www.arduino.cc/en/Reference/PortManipulation)
+
+[https://garretlab.web.fc2.com/en/arduino/inside/hardware/arduino/avr/cores/arduino/Arduino.h/digitalPinToBitMask.html](https://garretlab.web.fc2.com/en/arduino/inside/hardware/arduino/avr/cores/arduino/Arduino.h/digitalPinToBitMask.html)
+
+[http://ww1.microchip.com/downloads/en/devicedoc/atmel-0856-avr-instruction-set-manual.pdf](http://ww1.microchip.com/downloads/en/devicedoc/atmel-0856-avr-instruction-set-manual.pdf)
+
+## ASM in C
+
+[https://www.microchip.com/webdoc/AVRLibcReferenceManual/inline_asm_1gcc_asm.html](https://www.microchip.com/webdoc/AVRLibcReferenceManual/inline_asm_1gcc_asm.html)
+
+[https://www.microchip.com/webdoc/AVRLibcReferenceManual/inline_asm_1io_ops.html](https://www.microchip.com/webdoc/AVRLibcReferenceManual/inline_asm_1io_ops.html)
+
+[http://www.ethernut.de/en/documents/arm-inline-asm.html](http://www.ethernut.de/en/documents/arm-inline-asm.html)
+
+[https://stackoverflow.com/questions/3898435](https://stackoverflow.com/questions/3898435)
+
+## C++ templating
+
+[https://stackoverflow.com/questions/37303968](https://stackoverflow.com/questions/37303968)

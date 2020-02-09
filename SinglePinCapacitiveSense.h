@@ -35,12 +35,12 @@
 
 // The class implementation and declaration have are in the same header because it's a templated class
 
-template<uintptr_t PINx_ADDR, uint8_t PIN_MASK>
+template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
 class SinglePinCapacitiveSense {
   public:    
-    SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>(uint8_t samples, uint16_t pressThreshold);
-    SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>(uint8_t samples);
-    SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>();
+    SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>(uint8_t samples, uint16_t pressThreshold);
+    SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>(uint8_t samples);
+    SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>();
     
     bool     IsValidConfig(uint8_t arduinoPin);  // Check if the hard-coded values match with the Arduino pin values
     SPC_VAL  SampleAllSamples(void);             // Just do a measurement of all this->samples samples
@@ -63,8 +63,8 @@ class SinglePinCapacitiveSense {
 };
 
 
-template<uintptr_t PINx_ADDR, uint8_t PIN_MASK>
-SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::SinglePinCapacitiveSense(uint8_t samples, uint16_t pressThreshold) { 
+template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
+SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SinglePinCapacitiveSense(uint8_t samples, uint16_t pressThreshold) { 
   this->samples        = samples;
   this->pressThreshold = pressThreshold;
 
@@ -72,8 +72,8 @@ SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::SinglePinCapacitiveSense(uint8_t 
 }
 
 
-template<uintptr_t PINx_ADDR, uint8_t PIN_MASK>
-SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::SinglePinCapacitiveSense(uint8_t samples) { 
+template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
+SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SinglePinCapacitiveSense(uint8_t samples) { 
   this->samples        = samples;
   this->pressThreshold = this->samples;  // To consider a press: lastMeasurement >= measurementOffset + sample
 
@@ -81,8 +81,8 @@ SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::SinglePinCapacitiveSense(uint8_t 
 }
 
 
-template<uintptr_t PINx_ADDR, uint8_t PIN_MASK>
-SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::SinglePinCapacitiveSense() { 
+template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
+SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SinglePinCapacitiveSense() { 
   this->samples        = SINGLE_PIN_CAPACITIVE_SENSE_DEFAULT_SAMPLING;
   this->pressThreshold = this->samples;  // To consider a press: lastMeasurement >= measurementOffset + sample
 
@@ -90,35 +90,139 @@ SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::SinglePinCapacitiveSense() {
 }
 
 
-template<uintptr_t PINx_ADDR, uint8_t PIN_MASK>
-void SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::ConstructorCommon(void) {
+template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
+void SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::ConstructorCommon(void) {
   this->Calibrate();
-  *((volatile uint8_t *)PINx_ADDR+1) |= PIN_MASK;  // DDRx  Switch to output
-  *((volatile uint8_t *)PINx_ADDR+2) &= ~PIN_MASK; // PORTx Output will be LOW
+  *((volatile uint8_t *)PINx_ADDR+1) |= PIN_BIT;  // DDRx  Switch to output
+  *((volatile uint8_t *)PINx_ADDR+2) &= ~PIN_BIT; // PORTx Output will be LOW
 }
 
 
-template<uintptr_t PINx_ADDR, uint8_t PIN_MASK>
-void SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::Calibrate(void) {
+template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
+void SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::Calibrate(void) {
   this->smallestMeasurement       = UINT16_MAX;
   this->measurementOffset         = UINT16_MAX;
   this->smallestMeasurementStreak = 0;  
 }
 
 
-template<uintptr_t PINx_ADDR, uint8_t PIN_MASK>
-uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::SampleOnce(void) {
-  uint8_t count = 0;
+template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
+uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SampleOnce(void) {
+  // 16-bit counter concatinated from two 8-bit counters
+  uint8_t minor = 0;
+  uint8_t major = 0;
 
 #if SINGLE_PIN_CAPACITIVE_SENSE_BLOCK_IRQ == 1
   noInterrupts();
 #endif
-  *((volatile uint8_t *)PINx_ADDR+1) &= ~PIN_MASK; // DDRx Set direction to input
-  *((volatile uint8_t *)PINx_ADDR+2) |= PIN_MASK;  // PORTx Enable pull-up
 
-  while ( !(*((volatile uint8_t *)PINx_ADDR) & PIN_MASK) && count < SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT )  { 
+  *((volatile uint8_t *)PINx_ADDR+1) &= ~PIN_BIT; // DDRx Set direction to input
+  *((volatile uint8_t *)PINx_ADDR+2) |= PIN_BIT;  // PORTx Enable pull-up
+
+  // enum { IO_ADDRESS = _SFR_IO_ADDR(PINx_ADDR) };
+
+  // Reserve 15 registers as buffer
+  volatile uint8_t b0 = 0, b1, b2,  b3,  b4,  b5,  b6,  b7;
+  volatile uint8_t b8, b9, b10, b11, b12, b13, b14;
+
+  // https://www.microchip.com/webdoc/AVRLibcReferenceManual/inline_asm_1gcc_asm.html
+  // https://www.microchip.com/webdoc/AVRLibcReferenceManual/inline_asm_1io_ops.html
+  // http://www.ethernut.de/en/documents/arm-inline-asm.html
+  // https://stackoverflow.com/questions/3898435
+
+  // Sample the input 16 times in row, control logic is spread out so it will
+  // not create big jitter stall of sampling after 16 samples are taken
+  // but spread out and smaller stalls.
+  // IN is inert to SREG and we can spread the control logic between sampling
+  asm (
+    "sample%=: \n\t"
+    "in %[reg0],   %[addr] \n\t"
+    "in %[reg1],   %[addr] \n\t"
+    "in %[reg2],   %[addr] \n\t"
+    "in %[reg3],   %[addr] \n\t"
+    "inc %[major] \n\t"
+    "in %[reg4],   %[addr] \n\t"
+    "in %[reg5],   %[addr] \n\t"
+    "in %[reg6],   %[addr] \n\t"
+    "in %[reg7],   %[addr] \n\t"
+    "cpi %[major], %[major_max] \n\t"  // Compare with immediate
+    "in %[reg8],   %[addr] \n\t"
+    "in %[reg9],   %[addr] \n\t"  
+    "in %[reg10],  %[addr] \n\t"
+    "in %[reg11],  %[addr] \n\t"
+    "brcs timeout%= \n\t"              // Branch if carry set (major > TIMEOUT)
+    "in %[reg12],  %[addr] \n\t"
+    "in %[reg13],  %[addr] \n\t"
+    "in %[reg14],  %[addr] \n\t"
+    "sbis %[addr], %[bit] \n\t"        // Skip if bit in I/O is set, no need to read it into a register
+    "rjmp sample%= \n\t"               // The pin was not set yet, so continue sampling
+
+    // Do binary search on the 'buffer' for place where the bit was set
+
+    "sbrc %[reg7], %[bit] \n\t"        // 0-14 middle 7
+    "rjmp bin3tree%=\n\t"
+
+    "sbrc %[reg11], %[bit] \n\t"       // 8-14 middle 11
+    "rjmp bin9tree%=\n\t"
+
+    "sbrc %[reg13], %[bit] \n\t"       // 12-14 middle 13
+    "rjmp bin12tree%=\n\t"
+
+    "sbrc %[reg14], %[bit] \n\t"       // testing for 14
+    "subi %[count], -14 \n\t"
+    "subi %[count], -15 \n\t"
+    "rjmp end%= \n\t"
+
+    "bin3tree%=:\n\t"                  // 0-6 middle 3
+    "sbrc %[reg7], %[bit] \n\t"
+    "rjmp bin1tree%=\n\t"
+
+    "sbrc %[reg5], %[bit] \n\t"        // 4-6 middle 5
+    "rjmp bin4tree%=\n\t"
+
+    "sbrc %[reg6], %[bit] \n\t"        // testing for 6
+    "subi %[count], -6 \n\t"
+    "subi %[count], -7 \n\t"
+    "rjmp end%= \n\t"
+
+    "bin9tree%=:\n\t"                  // 8-10 middle 3
+    "sbrc %[reg7], %[bit] \n\t"
+    "rjmp bin1tree%=\n\t"
+
+
+    // Major counter timeouted, return 0
+    "timeout%=: \n\t"                  
+    "clr %[major] \n\t"                // clear major => eor major,major
+
+    // Return our regular results
+    "end%="
+    : [reg0]  "=r"(b0), 
+      [reg1]  "=r"(b1),
+      [reg2]  "=r"(b2),
+      [reg3]  "=r"(b3),
+      [reg4]  "=r"(b4),
+      [reg5]  "=r"(b5),
+      [reg6]  "=r"(b6),
+      [reg7]  "=r"(b7),
+      [reg8]  "=r"(b8),
+      [reg9]  "=r"(b9),
+      [reg10] "=r"(b10),
+      [reg11] "=r"(b11),
+      [reg12] "=r"(b12),
+      [reg13] "=r"(b13),
+      [reg14] "=r"(b14),
+      [major] "+d"(major),
+      [minor] "+d"(minor)
+    : [addr] "I"(PINx_ADDR - __SFR_OFFSET), // Same effect as _SFR_IO_ADDR(PINx_ADDR), changing absolute address to IO address
+      [bit] "I"(PIN_BIT),
+      [bit_mask] "M"(1 << PIN_BIT),
+      [major_max] "M"(SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT)
+  );
+
+
+  while ( !(*((volatile uint8_t *)PINx_ADDR) & PIN_BIT) && major < SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT )  { 
     // Read PINx input and counting how long it took to charge
-    count++;
+    major++;
   }
 
 #if SINGLE_PIN_CAPACITIVE_SENSE_BLOCK_IRQ == 1
@@ -127,25 +231,25 @@ uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::SampleOnce(void) {
 
   this->SampleCleanup();
 
-  return count;
+  return major;
 }
 
 
-template<uintptr_t PINx_ADDR, uint8_t PIN_MASK>
-void SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::SampleCleanup(void) {
+template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
+void SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SampleCleanup(void) {
 #ifdef SINGLE_PIN_CAPACITIVE_SENSE_BLOCK_IRQ  
   interrupts();  // Enabling interrupts in case they were not already, depending on version/variation of SampleOnce, this might happen
 #endif
   
   // Pulling down the residual capacity by setting pin to output low
   // and waiting a moment to make sure it's drained
-  *((volatile uint8_t *)PINx_ADDR+2) &= ~PIN_MASK; // PORTx Disable pull-up input (output will be LOW)
-  *((volatile uint8_t *)PINx_ADDR+1) |= PIN_MASK;  // DDRx  Switch from input to output
+  *((volatile uint8_t *)PINx_ADDR+2) &= ~PIN_BIT; // PORTx Disable pull-up input (output will be LOW)
+  *((volatile uint8_t *)PINx_ADDR+1) |= PIN_BIT;  // DDRx  Switch from input to output
 }
 
 
-template<uintptr_t PINx_ADDR, uint8_t PIN_MASK>
-SPC_VAL SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::SampleAllSamples(void) {
+template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
+SPC_VAL SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SampleAllSamples(void) {
   this->lastMeasurement = 0;
   
   for (uint8_t sample=0; sample < this->samples; sample++) {
@@ -153,8 +257,14 @@ SPC_VAL SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::SampleAllSamples(void) {
     this->lastMeasurement += this->SampleOnce();
   }
 
+  // Update the smallest measurement if the currently last measurement is smaller
+  // but ingore the 0/timeout measurements
+  if (this->lastMeasurement < this->smallestMeasurement && this->lastMeasurement != 0) {
+    this->smallestMeasurement = this->lastMeasurement;
+  }
+
   // Count how many measurements in the row are same or smaller than the smallest measurement
-  if (this->lastMeasurement <= this->smallestMeasurement) {
+  if (this->lastMeasurement == this->smallestMeasurement) {
     this->smallestMeasurementStreak++;
   } else {
     this->smallestMeasurementStreak = 0;
@@ -166,17 +276,12 @@ SPC_VAL SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::SampleAllSamples(void) {
     this->measurementOffset = this->smallestMeasurement;
   }
 
-  // Update the smallest measurement if the currently last measurement is smaller
-  if (this->lastMeasurement < this->smallestMeasurement) {
-    this->smallestMeasurement = this->lastMeasurement;
-  }
-  
   return this->lastMeasurement;
 }
 
 
-template<uintptr_t PINx_ADDR, uint8_t PIN_MASK>
-bool SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::IsPressed(void) {
+template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
+bool SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::IsPressed(void) {
   this->SampleAllSamples();
   
   if (this->measurementOffset == UINT16_MAX) {
@@ -193,14 +298,14 @@ bool SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::IsPressed(void) {
 }
 
 
-template<uintptr_t PINx_ADDR, uint8_t PIN_MASK>
-SPC_VAL SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::GetLastMeasurementRaw(void) {
+template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
+SPC_VAL SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::GetLastMeasurementRaw(void) {
   return this->lastMeasurement;
 }
 
 
-template<uintptr_t PINx_ADDR, uint8_t PIN_MASK>
-SPC_VAL SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::GetLastMeasurementCalibrated(void) {
+template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
+SPC_VAL SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::GetLastMeasurementCalibrated(void) {
   if (this->lastMeasurement < this->measurementOffset) {
     // If the measured value is below our expected minimim, then do not return
     // negative value and just return no press. (return type is unsigned anyway)
@@ -211,8 +316,8 @@ SPC_VAL SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::GetLastMeasurementCalibra
 }
 
 
-template<uintptr_t PINx_ADDR, uint8_t PIN_MASK>
-bool SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::IsValidConfig(uint8_t arduinoPin) {
+template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
+bool SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::IsValidConfig(uint8_t arduinoPin) {
   bool status = true;
 
   // Check pin's port base address
@@ -225,8 +330,9 @@ bool SinglePinCapacitiveSense<PINx_ADDR, PIN_MASK>::IsValidConfig(uint8_t arduin
   }
 
   // Check pin's bit mask
-  if (digitalPinToBitMask(arduinoPin) != PIN_MASK) {
-    Serial.print(" PIN_MASK should be ");
+  // TODO: fix
+  if (digitalPinToBitMask(arduinoPin) != 1 << PIN_BIT) {
+    Serial.print(" PIN_BIT should be ");
     Serial.print(digitalPinToBitMask(arduinoPin));
     Serial.print(".");
     status = false;

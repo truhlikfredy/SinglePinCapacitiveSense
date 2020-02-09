@@ -169,7 +169,10 @@ uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SampleOnce(void) {
 
     // Go through all 15 registers and count how long they were not set
     // The binary search was tempting, but buffer is too small and caused
-    // a lot of jumping
+    // a lot of jumping. And at this point we are not in the hurry anyway.
+    // This is not critical part of the sampling and binary search might have
+    // introduced bugs, hard readability and not easy to scale (if more/or less
+    // registers will be added to the buffer)
     "sbrs %[reg0], %[bit] \n\t"
     "inc %[minor] \n\t"
 

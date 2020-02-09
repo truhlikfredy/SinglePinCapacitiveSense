@@ -58,9 +58,9 @@ How many times the sensor will be sampled (when constructor arguments are left t
 `#define SINGLE_PIN_CAPACITIVE_SENSE_DEFAULT_SAMPLING 16`
 
 
-To change how many sets of the 16 micro samples have to be taken before the capacitance considered too high and sampling aborted as an error (non-touched result). Has to be lower than 255 and it shouldn't be too low because even untouched pin might take some time to get passed by the sampler:
+To change how many sets of the 16 micro samples have to be taken before the capacitance considered too high and sampling aborted as an error (non-touched result). Has to be lower than 256 and it shouldn't be too low because even untouched pin might take some time to get passed by the sampler:
 
-`#define SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT 254`
+`#define SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT 255`
 
 
 When calibrating the inputs to detect what is the lowest noise level, how many of these have to be returned in the row to consider the global minimum and not some intermittent temporary local minimum/noise. This will make the first X iteration of the touch sensing ineffective as the sensor will be calibrating itself:

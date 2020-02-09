@@ -15,10 +15,10 @@
 #endif
 
 #ifndef SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT
-// When the sampler gives up, it needs to be equal or lower than 255 and lower
+// When the sampler gives up, it needs to be equal or lower than 256 and lower
 // than 65535/sampling (if SPC_VAL uint16_t is used). Giving it value too low
 // might disregard genuine presses
-#define SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT          254
+#define SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT          255
 #endif
 
 #ifndef SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT
@@ -158,7 +158,7 @@ uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SampleOnce(void) {
     "in %[reg9],   %[addr] \n\t"  
     "in %[reg10],  %[addr] \n\t"
     "in %[reg11],  %[addr] \n\t"
-    "brcc timeout%= \n\t"              // Branch if carry cleared (major > SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT)
+    "breq timeout%= \n\t"              // Branch if equal (major == SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT)
     "in %[reg12],  %[addr] \n\t"
     "in %[reg13],  %[addr] \n\t"
     "in %[reg14],  %[addr] \n\t"

@@ -357,11 +357,10 @@ bool SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::IsValidConfig(uint8_t arduino
     status = false;
   }
 
-  // Check pin's bit mask
-  // TODO: fix
+  // Check pin's bit
   if (digitalPinToBitMask(arduinoPin) != 1 << PIN_BIT) {
     Serial.print(" PIN_BIT should be ");
-    Serial.print(digitalPinToBitMask(arduinoPin));
+    Serial.print(15 - __builtin_clz(digitalPinToBitMask(arduinoPin)));
     Serial.print(".");
     status = false;
   }

@@ -16,8 +16,9 @@
 
 #ifndef SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT
 // When the sampler gives up, it needs to be equal or lower than 255 and lower
-// than 65535/sampling (if SPC_VAL uint16_t is used)
-#define SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT          200
+// than 65535/sampling (if SPC_VAL uint16_t is used). Giving it value too low
+// might disregard genuine presses
+#define SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT          240
 #endif
 
 #ifndef SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT
@@ -109,21 +110,21 @@ void SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::Calibrate(void) {
 template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
 uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SampleOnce(void) {
   // 16-bit counter concatinated from two 8-bit counters
-  uint8_t minor = 0;
-  uint8_t major = 0;
+  uint8_t minor = 0; // Minor is expected to be 0-15
+  uint8_t major = 0; // Major should be capped with SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT
 
 #if SINGLE_PIN_CAPACITIVE_SENSE_BLOCK_IRQ == 1
   noInterrupts();
 #endif
 
+  // Should be safe even if IRQ happened between these two lines
   *((volatile uint8_t *)PINx_ADDR+1) &= ~PIN_BIT; // DDRx Set direction to input
   *((volatile uint8_t *)PINx_ADDR+2) |= PIN_BIT;  // PORTx Enable pull-up
-
-  // enum { IO_ADDRESS = _SFR_IO_ADDR(PINx_ADDR) };
 
   // Reserve 15 registers as buffer
   uint8_t b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14;
 
+  // http://ww1.microchip.com/downloads/en/devicedoc/atmel-0856-avr-instruction-set-manual.pdf
   // https://www.microchip.com/webdoc/AVRLibcReferenceManual/inline_asm_1gcc_asm.html
   // https://www.microchip.com/webdoc/AVRLibcReferenceManual/inline_asm_1io_ops.html
   // http://www.ethernut.de/en/documents/arm-inline-asm.html
@@ -139,69 +140,74 @@ uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SampleOnce(void) {
     "in %[reg1],   %[addr] \n\t"
     "in %[reg2],   %[addr] \n\t"
     "in %[reg3],   %[addr] \n\t"
-    "inc %[major] \n\t"
+    "inc %[major] \n\t"                // Increment the major counter
     "in %[reg4],   %[addr] \n\t"
     "in %[reg5],   %[addr] \n\t"
     "in %[reg6],   %[addr] \n\t"
     "in %[reg7],   %[addr] \n\t"
-    "cpi %[major], %[major_max] \n\t"  // Compare with immediate
+    "cpi %[major], %[major_max] \n\t"  // Compare major counter with SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT
     "in %[reg8],   %[addr] \n\t"
     "in %[reg9],   %[addr] \n\t"  
     "in %[reg10],  %[addr] \n\t"
     "in %[reg11],  %[addr] \n\t"
-    "brcs timeout%= \n\t"              // Branch if carry set (major > TIMEOUT)
+    "brcs timeout%= \n\t"              // Branch if carry set (major > SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT)
     "in %[reg12],  %[addr] \n\t"
     "in %[reg13],  %[addr] \n\t"
     "in %[reg14],  %[addr] \n\t"
-    "sbis %[addr], %[bit] \n\t"        // Skip if bit in I/O is set, no need to read the last one into a register
-    "rjmp sample%= \n\t"               // The pin was not set yet, so continue sampling
+    "sbis %[addr], %[bit] \n\t"        // Skip if bit in I/O is set, no need to read the sample into a register
+    "rjmp sample%= \n\t"               // After 16 samples the pin was not set yet, so continue sampling
+    // This whole loop can sample 16 samples in 21 clocks (jump included) :
+    // 16 x 1clk samples, 3 x 1clk count logic, 1 x 2clk repeat jump.
+    // Averaging 1.3 clocks per sample (upto 4080 samples when SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT is 255 )
 
 
     // Go through all 15 registers and count how long they were not set
+    // The binary search was tempting, but buffer is too small and caused
+    // a lot of jumping
     "sbrs %[reg0], %[bit] \n\t"
-    "inc %[minor]\n\t"
+    "inc %[minor] \n\t"
 
     "sbrs %[reg1], %[bit] \n\t"
-    "inc %[minor]\n\t"
+    "inc %[minor] \n\t"
 
     "sbrs %[reg2], %[bit] \n\t"
-    "inc %[minor]\n\t"
+    "inc %[minor] \n\t"
 
     "sbrs %[reg3], %[bit] \n\t"
-    "inc %[minor]\n\t"
+    "inc %[minor] \n\t"
 
     "sbrs %[reg4], %[bit] \n\t"
-    "inc %[minor]\n\t"
+    "inc %[minor] \n\t"
 
     "sbrs %[reg5], %[bit] \n\t"
-    "inc %[minor]\n\t"
+    "inc %[minor] \n\t"
 
     "sbrs %[reg6], %[bit] \n\t"
-    "inc %[minor]\n\t"
+    "inc %[minor] \n\t"
 
     "sbrs %[reg7], %[bit] \n\t"
-    "inc %[minor]\n\t"
+    "inc %[minor] \n\t"
 
     "sbrs %[reg8], %[bit] \n\t"
-    "inc %[minor]\n\t"
+    "inc %[minor] \n\t"
 
     "sbrs %[reg9], %[bit] \n\t"
-    "inc %[minor]\n\t"
+    "inc %[minor] \n\t"
 
     "sbrs %[reg10], %[bit] \n\t"
-    "inc %[minor]\n\t"
+    "inc %[minor] \n\t"
 
     "sbrs %[reg11], %[bit] \n\t"
-    "inc %[minor]\n\t"
+    "inc %[minor] \n\t"
 
     "sbrs %[reg12], %[bit] \n\t"
-    "inc %[minor]\n\t"
+    "inc %[minor] \n\t"
 
     "sbrs %[reg13], %[bit] \n\t"
-    "inc %[minor]\n\t"
+    "inc %[minor] \n\t"
 
     "sbrs %[reg14], %[bit] \n\t"
-    "inc %[minor]\n\t"
+    "inc %[minor] \n\t"
 
     "rjmp end%= \n\t"                  // Finished counting
 
@@ -210,8 +216,10 @@ uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SampleOnce(void) {
     "timeout%=: \n\t"                  
     "clr %[major] \n\t"                // clear major => eor major,major
 
-    // Return our regular results
+    // Return our regular major + minor results
     "end%=:"
+
+
     : [reg0]  "=r"(b0), 
       [reg1]  "=r"(b1),
       [reg2]  "=r"(b2),
@@ -251,7 +259,7 @@ void SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SampleCleanup(void) {
 #endif
   
   // Pulling down the residual capacity by setting pin to output low
-  // and waiting a moment to make sure it's drained
+  // and waiting a moment to make sure it's drained. Should be safe even if IRQ happened in the middle
   *((volatile uint8_t *)PINx_ADDR+2) &= ~PIN_BIT; // PORTx Disable pull-up input (output will be LOW)
   *((volatile uint8_t *)PINx_ADDR+1) |= PIN_BIT;  // DDRx  Switch from input to output
 }

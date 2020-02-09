@@ -1,3 +1,10 @@
+// If needed the following defines:
+// SINGLE_PIN_CAPACITIVE_SENSE_BLOCK_IRQ
+// SINGLE_PIN_CAPACITIVE_SENSE_DEFAULT_SAMPLING
+// SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT
+// SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT
+// SPC_VAL
+// Have to be defined before the SinglePinCapacitiveSense.h include
 #include "SinglePinCapacitiveSense.h"
 
 // Copyright 2020 Anton Krug - MIT License
@@ -12,9 +19,7 @@
 // it's necessary for performance which is critical in sensing capacitance
 // without external resistor.
 
-// Tested on: Arduino Duemilanove ATmega328 - 16MHz
-
-// Multiple constructors are avaiable, if samples, pressThreshold are not
+// Multiple constructors are available, if samples, pressThreshold are not
 // given then, default values will be used instead (default can be changed
 // with define:
 // SINGLE_PIN_CAPACITIVE_SENSE_DEFAULT_SAMPLING
@@ -45,6 +50,7 @@ SinglePinCapacitiveSense<PortD(), 4> sensePin4;  // Arduino Pin4 = AVR PortD3
 // they are not correct it will output on the UART what is expected for that
 // Arduino pin.
 
+
 bool isPinsConfigValid() {
   // Check if Arduino pin 2 coresponds to the values in our sensePin2
   Serial.print("Config for sensePin2:");
@@ -60,6 +66,7 @@ bool isPinsConfigValid() {
 
   return true;
 }
+
 
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
@@ -77,8 +84,9 @@ void setup() {
   }
 }
 
+
 void loop() {
-  // For the first 4 iterations of this loop, the sense will not trigger as they
+  // For the first 6 iterations of this loop, the sense will not trigger as they
   // are calibrating, this can be changed with define:
   // SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT
   // And it will affect how quickly the calibration.
@@ -101,5 +109,5 @@ void loop() {
 
   Serial.println();
 
-  delay(50);  // The delay can be completely removed if needed
+  delay(100);  // The delay can be completely removed if needed
 }

@@ -122,8 +122,7 @@ uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SampleOnce(void) {
   // enum { IO_ADDRESS = _SFR_IO_ADDR(PINx_ADDR) };
 
   // Reserve 15 registers as buffer
-  volatile uint8_t b0 = 0, b1, b2,  b3,  b4,  b5,  b6,  b7;
-  volatile uint8_t b8, b9, b10, b11, b12, b13, b14;
+  uint8_t b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14;
 
   // https://www.microchip.com/webdoc/AVRLibcReferenceManual/inline_asm_1gcc_asm.html
   // https://www.microchip.com/webdoc/AVRLibcReferenceManual/inline_asm_1io_ops.html
@@ -154,40 +153,57 @@ uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SampleOnce(void) {
     "in %[reg12],  %[addr] \n\t"
     "in %[reg13],  %[addr] \n\t"
     "in %[reg14],  %[addr] \n\t"
-    "sbis %[addr], %[bit] \n\t"        // Skip if bit in I/O is set, no need to read it into a register
+    "sbis %[addr], %[bit] \n\t"        // Skip if bit in I/O is set, no need to read the last one into a register
     "rjmp sample%= \n\t"               // The pin was not set yet, so continue sampling
 
-    // Do binary search on the 'buffer' for place where the bit was set
 
-    "sbrc %[reg7], %[bit] \n\t"        // 0-14 middle 7
-    "rjmp bin3tree%=\n\t"
+    // Go through all 15 registers and count how long they were not set
+    "sbrs %[reg0], %[bit] \n\t"
+    "inc %[minor]\n\t"
 
-    "sbrc %[reg11], %[bit] \n\t"       // 8-14 middle 11
-    "rjmp bin9tree%=\n\t"
+    "sbrs %[reg1], %[bit] \n\t"
+    "inc %[minor]\n\t"
 
-    "sbrc %[reg13], %[bit] \n\t"       // 12-14 middle 13
-    "rjmp bin12tree%=\n\t"
+    "sbrs %[reg2], %[bit] \n\t"
+    "inc %[minor]\n\t"
 
-    "sbrc %[reg14], %[bit] \n\t"       // testing for 14
-    "subi %[count], -14 \n\t"
-    "subi %[count], -15 \n\t"
-    "rjmp end%= \n\t"
+    "sbrs %[reg3], %[bit] \n\t"
+    "inc %[minor]\n\t"
 
-    "bin3tree%=:\n\t"                  // 0-6 middle 3
-    "sbrc %[reg7], %[bit] \n\t"
-    "rjmp bin1tree%=\n\t"
+    "sbrs %[reg4], %[bit] \n\t"
+    "inc %[minor]\n\t"
 
-    "sbrc %[reg5], %[bit] \n\t"        // 4-6 middle 5
-    "rjmp bin4tree%=\n\t"
+    "sbrs %[reg5], %[bit] \n\t"
+    "inc %[minor]\n\t"
 
-    "sbrc %[reg6], %[bit] \n\t"        // testing for 6
-    "subi %[count], -6 \n\t"
-    "subi %[count], -7 \n\t"
-    "rjmp end%= \n\t"
+    "sbrs %[reg6], %[bit] \n\t"
+    "inc %[minor]\n\t"
 
-    "bin9tree%=:\n\t"                  // 8-10 middle 3
-    "sbrc %[reg7], %[bit] \n\t"
-    "rjmp bin1tree%=\n\t"
+    "sbrs %[reg7], %[bit] \n\t"
+    "inc %[minor]\n\t"
+
+    "sbrs %[reg8], %[bit] \n\t"
+    "inc %[minor]\n\t"
+
+    "sbrs %[reg9], %[bit] \n\t"
+    "inc %[minor]\n\t"
+
+    "sbrs %[reg10], %[bit] \n\t"
+    "inc %[minor]\n\t"
+
+    "sbrs %[reg11], %[bit] \n\t"
+    "inc %[minor]\n\t"
+
+    "sbrs %[reg12], %[bit] \n\t"
+    "inc %[minor]\n\t"
+
+    "sbrs %[reg13], %[bit] \n\t"
+    "inc %[minor]\n\t"
+
+    "sbrs %[reg14], %[bit] \n\t"
+    "inc %[minor]\n\t"
+
+    "rjmp end%= \n\t"                  // Finished counting
 
 
     // Major counter timeouted, return 0
@@ -195,7 +211,7 @@ uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SampleOnce(void) {
     "clr %[major] \n\t"                // clear major => eor major,major
 
     // Return our regular results
-    "end%="
+    "end%=:"
     : [reg0]  "=r"(b0), 
       [reg1]  "=r"(b1),
       [reg2]  "=r"(b2),
@@ -213,17 +229,10 @@ uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SampleOnce(void) {
       [reg14] "=r"(b14),
       [major] "+d"(major),
       [minor] "+d"(minor)
-    : [addr] "I"(PINx_ADDR - __SFR_OFFSET), // Same effect as _SFR_IO_ADDR(PINx_ADDR), changing absolute address to IO address
-      [bit] "I"(PIN_BIT),
-      [bit_mask] "M"(1 << PIN_BIT),
+    : [addr]  "I"(PINx_ADDR - __SFR_OFFSET), // Same effect as _SFR_IO_ADDR(PINx_ADDR), changing absolute address to IO address
+      [bit]   "I"(PIN_BIT),
       [major_max] "M"(SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT)
   );
-
-
-  while ( !(*((volatile uint8_t *)PINx_ADDR) & PIN_BIT) && major < SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT )  { 
-    // Read PINx input and counting how long it took to charge
-    major++;
-  }
 
 #if SINGLE_PIN_CAPACITIVE_SENSE_BLOCK_IRQ == 1
   interrupts();
@@ -231,13 +240,13 @@ uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SampleOnce(void) {
 
   this->SampleCleanup();
 
-  return major;
+  return major << 4 | minor;
 }
 
 
 template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
 void SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SampleCleanup(void) {
-#ifdef SINGLE_PIN_CAPACITIVE_SENSE_BLOCK_IRQ  
+#if SINGLE_PIN_CAPACITIVE_SENSE_BLOCK_IRQ == 1
   interrupts();  // Enabling interrupts in case they were not already, depending on version/variation of SampleOnce, this might happen
 #endif
   

@@ -168,6 +168,7 @@ uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SampleOnce(void) {
     // 16 x 1clk samples, 3 x 1clk count logic, 1 x 2clk repeat jump.
     // Averaging 1.3 clocks per sample (upto 4080 samples when SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT is 255 )
 
+    // TODO: Theoretically here the IRQs would be safe to be enabled
 
     // Go through all 15 registers and count how long they were not set
     // The binary search was tempting, but buffer is too small and caused

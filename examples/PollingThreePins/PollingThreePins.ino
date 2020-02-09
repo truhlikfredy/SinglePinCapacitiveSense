@@ -91,6 +91,8 @@ void loop() {
   // SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT
   // And it will affect how quickly the calibration.
 
+  static uint8_t count = 0;
+
   if (sensePin2.IsPressed() || sensePin3.IsPressed() || sensePin4.IsPressed()) {
     digitalWrite(LED_BUILTIN, HIGH);
   }
@@ -98,16 +100,22 @@ void loop() {
     digitalWrite(LED_BUILTIN, LOW);
   }
 
-  Serial.print("Sensor1= \t");
-  Serial.print(sensePin2.GetLastMeasurementCalibrated());
+  if ((count % 8) == 0) {
+    // Update the UART 8x less often, allows LED to be refreshed more often
+    // without hammering the UART with so many messages
+    
+    Serial.print("Sensor1= \t");
+    Serial.print(sensePin2.GetLastMeasurementCalibrated());
 
-  Serial.print("\tSensor2= \t");
-  Serial.print(sensePin3.GetLastMeasurementCalibrated());
+    Serial.print("\tSensor2= \t");
+    Serial.print(sensePin3.GetLastMeasurementCalibrated());
 
-  Serial.print("\tSensor3= \t");
-  Serial.print(sensePin4.GetLastMeasurementCalibrated());
+    Serial.print("\tSensor3= \t");
+    Serial.print(sensePin4.GetLastMeasurementCalibrated());
 
-  Serial.println();
+    Serial.println();    
+  }
 
-  delay(100);  // The delay can be completely removed if needed
+  count++;
+  delay(10);  // The delay can be completely removed if needed
 }

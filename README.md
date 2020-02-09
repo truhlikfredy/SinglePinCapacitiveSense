@@ -9,20 +9,22 @@
 
 - Requires only **1 digital input** on an AVR.
 - It doesn't require any additional capacitor/resistor, **no external components**.
-- **Hand-crafted assembly** sampler is very optimised.
+- **Hand-crafted assembly** sampler is very optimized.
 - It should be faster than the 2-pin or ADC method. Capable to capture up to 4080 samples with performance of **1.3 clock per sample**!
-- Allows to be tweaked from the constructors and from the defines as well.
-- If small enough samples iterations are used then on compile time it will be **auto-detected** and the return types and internal variables can **shrink** from uint32_t to uint16_t (making footprint )
+- Allows being tweaked from the constructors and from the defines as well.
+- If small enough samples iterations are used, then on compile-time it will be **auto-detected** and the some return types and internal variables can **shrink** from uint32_t to uint16_t (making footprint smaller)
 - Because v2.0 has much higher sampling speed, it can recognize the **pressure** much more **precisely**.
 
 # Disadvantages
 
-- Because using **internal pull-up** (and there is no pull-down) the sensing is done only on the 'charging' cycle and can't be tested again on the 'discharging' cycle. **No discharge measurement** means some accuracy is lost and this system is more sensitive to noise and environment changes. This pull-up resistance is not specified and could be different between devices.
+- Because using **internal pull-up** (and there is no pull-down) the sensing is done only on the 'charging' cycle and can't be tested again on the 'discharging' cycle. **No discharge measurement** means some accuracy is lost and this system is more sensitive to noise and environment changes. This pull-up resistance is not specified (around 20k-100k) and could be different between devices.
 - No way to increase the resistance and no way increase the sensitivity, only touch can be detected, **no proximity sensor**
 - Depends on the clock speed, tested on 16MHz, but should work at much lower clocks as now the sampling is very fast.
 - Because the C++ templates are used the code size will increase when more sensors are created.
 - Will not work on non-AVR Arduinos (if needed I could make ports).
-- Will not work well on IRQ heavy applications. To remedy the sensing can block IRQs `#define SINGLE_PIN_CAPACITIVE_SENSE_BLOCK_IRQ 1`
+- Will not work well on IRQ heavy applications. To remedy the sensing can block IRQs:
+
+`#define SINGLE_PIN_CAPACITIVE_SENSE_BLOCK_IRQ 1`
 
 # Tested devices
 

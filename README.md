@@ -81,7 +81,7 @@ When the sensor is touched the capacitance increases and charge-up slows down, b
 
 ![charging up when touching](../assets/images/press.png?raw=true)
 
-The fact that with **TTL 5V** the input can be considered **HIGH** already at **2V** is making this even more time-critical. On the figures above the voltage can get over 2V because the sampling is not as fast and charged up beyond the 2V before it was tested and pulled down (Note that release 2.0 and above is much faster). Another problem is that the pull-up resistor is not exactly specified and can be different between the devices. So this approach is not as robust/portable as the previously mentioned approaches, but if somebody can tune it for their device/environment/conditions, then it should be fine for hobby projects. However, this shouldn't be used for any critical input on a system that needs to be dependable.
+The fact that with **TTL 5V** the input can be considered **HIGH** already at **2V** is making this even more time-critical. On the figures above the voltage can get over 2V because the sampling is not as fast and can charged up beyond the 2V before it was tested and pulled down (Note that release 2.0 and above is much faster). Another problem is that the pull-up resistor is not exactly specified and can be different between the devices (20k - 100k). Values which work for me might not work for others and therefore it was important to include self-calibration. Overall this method is not as robust/portable as the previously mentioned approaches, but if somebody can tune it for their device/environment/conditions, then it should be fine for hobby projects. However, this shouldn't be used for any critical input on a system that needs to be dependable.
 
 # Why C++ templates are used
 

@@ -32,6 +32,7 @@ constexpr uintptr_t PortD() {
   return (uintptr_t)&PIND;
 }
 
+// https://www.theengineeringprojects.com/wp-content/uploads/2018/10/introduction-to-Arduino-Duemilanove-2-3.png
 SinglePinCapacitiveSense<PortD(), 2> sensePin2;  // Arduino Pin2 = AVR PortD2
 SinglePinCapacitiveSense<PortD(), 3> sensePin3;  // Arduino Pin3 = AVR PortD3
 SinglePinCapacitiveSense<PortD(), 4> sensePin4;  // Arduino Pin4 = AVR PortD3

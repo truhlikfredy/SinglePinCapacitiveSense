@@ -26,7 +26,7 @@ echo "Compile mega2560"
 docker run -it --rm -v $(pwd):/workspace -u $(id -u):$(id -g)  aarontc/arduino-builder arduino-builder -compile -hardware /arduino/hardware -tools /arduino/hardware/tools/avr -tools /arduino/tools-builder -fqbn arduino:avr:mega:cpu=atmega2560 -libraries /workspace/ -verbose -build-path /workspace/build-mega /workspace/examples/PollingThreePins/PollingThreePins.ino
 
 echo "Compile megaADK"
-docker run -it --rm -v $(pwd):/workspace -u $(id -u):$(id -g)  aarontc/arduino-builder arduino-builder -compile -hardware /arduino/hardware -tools /arduino/hardware/tools/avr -tools /arduino/tools-builder -fqbn arduino:avr:megaADK -libraries /workspace/ -verbose -build-path /workspace/build-megaADK /workspace/examples/PollingThreePins/PollingThreePins.ino
+docker run -it --rm -v $(pwd):/workspace -u $(id -u):$(id -g)  aarontc/arduino-builder arduino-builder -compile -hardware /arduino/hardware -tools /arduino/hardware/tools/avr -tools /arduino/tools-builder -fqbn arduino:avr:megaADK -libraries /workspace/ -verbose -build-path /workspace/build-megaADK /workspace/examples/MegaADK/MegaADK.ino
 
 echo "Generate map list for due"
 docker run -it --rm -v $(pwd):/workspace -u $(id -u):$(id -g)  aarontc/arduino-builder /arduino/hardware/tools/avr/bin/avr-objdump --source --all-headers --demangle --line-numbers --wide ./build-due/PollingThreePins.ino.elf > ./build-due/map-listing.txt

@@ -61,6 +61,7 @@ class SinglePinCapacitiveSense {
     bool     IsPressedDebounced(uint8_t count);  // Using specified counter
     SPC_VAL  GetLastMeasurementRaw(void);        // Return the value as measured
     SPC_VAL  GetLastMeasurementCalibrated(void); // Return the measured value - the measurementOffset (primitive high-pass filtering)
+    bool     GetDebouncedState(void);            // Return the stable state after the sensor was debounced
     void     Calibrate(void);                    // To reset the measurementOffset (normally invoked from the constructor)
     
   private:
@@ -70,6 +71,7 @@ class SinglePinCapacitiveSense {
     SPC_VAL  measurementOffset;                  // Keep track what was the smallest measurement which was measured consistently for many measurements
     SPC_VAL  smallestMeasurement;                // Keep track what was the smallest measurement done so far (to calculated the GetLastMeasurementCalibrated()
     uint8_t  smallestMeasurementStreak;          // How many of last measurements in the row were same as the smallest measurement
+    bool     debouncedState;                     // The stable state after the sensor was debounced
 
     void     ConstructorCommon(void);            // Prepare the pin and fields to expected state
     uint16_t SampleOnce(void);                   // Will measure the capacity once
@@ -107,6 +109,8 @@ SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SinglePinCapacitiveSense() {
 template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
 void SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::ConstructorCommon(void) {
   this->Calibrate();
+
+  this->debouncedState = false;
 
   // Should be safe even if IRQ happened between these two lines
   *((volatile uint8_t *)PINx_ADDR+2) &= ~(1 << PIN_BIT); // PORTx Output will be LOW (Input to High-Z)
@@ -341,31 +345,36 @@ bool SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::IsPressed(void) {
 
 
 template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
+bool SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::GetDebouncedState(void) {
+  return this->debouncedState;
+}
+
+
+template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
 bool SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::IsPressedDebounced(uint8_t count) {
   static uint8_t currentCount = 0;
   static bool    oldState     = false;
-  static bool    stableState  = false;
   bool           currentState = this->IsPressed();
 
   if (oldState != currentState) {
     currentCount = 0;
   } else {
     if (currentCount > count) {
-      stableState = currentState;
+      this->debouncedState = currentState;
     } else {
-      count++;
+      currentCount++;
     }
   }
 
   oldState = currentState;
 
-  return stableState;
+  return this->debouncedState;
 }
 
 
 template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
 bool SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::IsPressedDebounced(void) {
-  this->IsPressedDebounced(SINGLE_PIN_CAPACITIVE_SENSE_DEBOUNCE_COUNT);
+  return this->IsPressedDebounced(SINGLE_PIN_CAPACITIVE_SENSE_DEBOUNCE_COUNT);
 }
 
 

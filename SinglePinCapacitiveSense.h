@@ -28,6 +28,11 @@
 #define SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT     8
 #endif
 
+#ifndef SINGLE_PIN_CAPACITIVE_SENSE_DEBOUNCE_COUNT
+// The default value how many iterations it takes consider the state as stable
+#define SINGLE_PIN_CAPACITIVE_SENSE_DEBOUNCE_COUNT   10
+#endif
+
 #ifndef SPC_VAL
 // Decide what type the cumulative value will have, if taking small measurements
 // and using low sampling count then uint16_t might be used. It will try to detect
@@ -52,6 +57,8 @@ class SinglePinCapacitiveSense {
     bool     IsValidConfig(uint8_t arduinoPin);  // Check if the hard-coded values match with the Arduino pin values
     SPC_VAL  SampleAllSamples(void);             // Just do a measurement of all this->samples samples
     bool     IsPressed(void);                    // Do measurement and decided if the sensor was pressed or not
+    bool     IsPressedDebounced();               // Using the SINGLE_PIN_CAPACITIVE_SENSE_DEBOUNCE_COUNT as default
+    bool     IsPressedDebounced(uint8_t count);  // Using specified counter
     SPC_VAL  GetLastMeasurementRaw(void);        // Return the value as measured
     SPC_VAL  GetLastMeasurementCalibrated(void); // Return the measured value - the measurementOffset (primitive high-pass filtering)
     void     Calibrate(void);                    // To reset the measurementOffset (normally invoked from the constructor)
@@ -325,6 +332,35 @@ bool SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::IsPressed(void) {
       return false;
     }
   }
+}
+
+
+template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
+bool SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::IsPressedDebounced(uint8_t count) {
+  static uint8_t currentCount = 0;
+  static bool    oldState     = false;
+  static bool    stableState  = false;
+  bool           currentState = this->IsPressed();
+
+  if (oldState != currentState) {
+    currentCount = 0;
+  } else {
+    if (currentCount > count) {
+      stableState = currentState;
+    } else {
+      count++;
+    }
+  }
+
+  oldState = currentState;
+
+  return stableState;
+}
+
+
+template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
+bool SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::IsPressedDebounced(void) {
+  this->IsPressedDebounced(SINGLE_PIN_CAPACITIVE_SENSE_DEBOUNCE_COUNT);
 }
 
 

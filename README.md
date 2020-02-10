@@ -14,6 +14,8 @@
 - Allows being tweaked from the constructors and from the defines as well.
 - If small enough samples iterations are used, then on compile-time it will be **auto-detected** and the some return types and internal variables can **shrink** from uint32_t to uint16_t (making footprint smaller)
 - Because v2.0 has much higher sampling speed, it can recognize the **pressure** much more **precisely**.
+- Bundled in calibration (which will remove 'DC' offset from the measurements)
+- Bundled debounced methods
 
 # Disadvantages
 
@@ -67,6 +69,10 @@ To change how many sets of the 16 micro samples have to be taken before the capa
 When calibrating the inputs to detect what is the lowest noise level, how many of these have to be returned in the row to consider the global minimum and not some intermittent temporary local minimum/noise. This will make the first X iteration of the touch sensing ineffective as the sensor will be calibrating itself:
 
 `#define SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT 8`
+
+To change the default deboucing counter when no argument IsPressedDebounced(); is used, however for custom non-global changes there is IsPressedDebounced(uint8_t count); as well:
+
+`#define SINGLE_PIN_CAPACITIVE_SENSE_DEBOUNCE_COUNT 10`
 
 # How this works
 

@@ -32,6 +32,9 @@ constexpr uintptr_t PortD() {
   return (uintptr_t)&PIND;
 }
 
+// Look at the MegaADK example which showcases how to setup different ports
+// on boards which have different pin schema.
+
 // https://www.theengineeringprojects.com/wp-content/uploads/2018/10/introduction-to-Arduino-Duemilanove-2-3.png
 SinglePinCapacitiveSense<PortD(), 2> sensePin2;  // Arduino Pin2 = AVR PortD2
 SinglePinCapacitiveSense<PortD(), 3> sensePin3;  // Arduino Pin3 = AVR PortD3

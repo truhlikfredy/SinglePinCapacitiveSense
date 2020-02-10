@@ -125,6 +125,10 @@ The port might end up being defined as `(*(volatile uint8_t *)( 0x0B + 0x20))` w
 
 [http://ww1.microchip.com/downloads/en/devicedoc/atmel-0856-avr-instruction-set-manual.pdf](http://ww1.microchip.com/downloads/en/devicedoc/atmel-0856-avr-instruction-set-manual.pdf)
 
+## AVR pinouts
+
+[https://grobotronics.com/images/companies/1/datasheets/arduino-mega-pinout-diagram.jpg](https://grobotronics.com/images/companies/1/datasheets/arduino-mega-pinout-diagram.jpg)
+
 ## ASM in C
 
 [https://www.microchip.com/webdoc/AVRLibcReferenceManual/inline_asm_1gcc_asm.html](https://www.microchip.com/webdoc/AVRLibcReferenceManual/inline_asm_1gcc_asm.html)
@@ -140,3 +144,4 @@ The port might end up being defined as `(*(volatile uint8_t *)( 0x0B + 0x20))` w
 [https://stackoverflow.com/questions/37303968](https://stackoverflow.com/questions/37303968)
 
 [https://stackoverflow.com/questions/115703](https://stackoverflow.com/questions/115703)
+

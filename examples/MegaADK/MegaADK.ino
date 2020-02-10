@@ -13,6 +13,7 @@ constexpr uintptr_t PortG() {
   return (uintptr_t)&PING;
 }
 
+// https://grobotronics.com/images/companies/1/datasheets/arduino-mega-pinout-diagram.jpg
 SinglePinCapacitiveSense<PortE(), 4> sensePin2;  // ADK Pin2 = AVR PortE4
 SinglePinCapacitiveSense<PortE(), 5> sensePin3;  // ADK Pin3 = AVR PortE5
 SinglePinCapacitiveSense<PortG(), 5> sensePin4;  // ADK Pin4 = AVR PortG5

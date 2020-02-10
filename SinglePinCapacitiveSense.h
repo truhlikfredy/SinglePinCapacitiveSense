@@ -150,27 +150,27 @@ uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SampleOnce(void) {
   // but spread out and smaller stalls.
   // IN is inert to SREG and we can spread the control logic between sampling
   asm (
-    "sample%=: \n\t"
-    "in %[reg0],   %[addr] \n\t"
-    "in %[reg1],   %[addr] \n\t"
-    "in %[reg2],   %[addr] \n\t"
-    "in %[reg3],   %[addr] \n\t"
-    "inc %[major] \n\t"                // Increment the major counter
-    "in %[reg4],   %[addr] \n\t"
-    "in %[reg5],   %[addr] \n\t"
-    "in %[reg6],   %[addr] \n\t"
-    "in %[reg7],   %[addr] \n\t"
-    "cpi %[major], %[major_max] \n\t"  // Compare major counter with SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT
-    "in %[reg8],   %[addr] \n\t"
-    "in %[reg9],   %[addr] \n\t"  
-    "in %[reg10],  %[addr] \n\t"
-    "in %[reg11],  %[addr] \n\t"
-    "breq timeout%= \n\t"              // Branch if equal (major == SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT)
-    "in %[reg12],  %[addr] \n\t"
-    "in %[reg13],  %[addr] \n\t"
-    "in %[reg14],  %[addr] \n\t"
-    "sbis %[addr], %[bit] \n\t"        // Skip if bit in I/O is set, no need to read the sample into a register
-    "rjmp sample%= \n\t"               // After 16 samples the pin was not set yet, so continue sampling
+    "sample%=:                  \n\t"
+    "in %[reg0],   %[addr]      \n\t"
+    "in %[reg1],   %[addr]      \n\t"
+    "in %[reg2],   %[addr]      \n\t"
+    "in %[reg3],   %[addr]      \n\t"
+    "inc %[major]               \n\t" // Increment the major counter
+    "in %[reg4],   %[addr]      \n\t"
+    "in %[reg5],   %[addr]      \n\t"
+    "in %[reg6],   %[addr]      \n\t"
+    "in %[reg7],   %[addr]      \n\t"
+    "cpi %[major], %[major_max] \n\t" // Compare major counter with SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT
+    "in %[reg8],   %[addr]      \n\t"
+    "in %[reg9],   %[addr]      \n\t"  
+    "in %[reg10],  %[addr]      \n\t"
+    "in %[reg11],  %[addr]      \n\t"
+    "breq timeout%=             \n\t" // Branch if equal (major == SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT)
+    "in %[reg12],  %[addr]      \n\t"
+    "in %[reg13],  %[addr]      \n\t"
+    "in %[reg14],  %[addr]      \n\t"
+    "sbis %[addr], %[bit]       \n\t" // Skip if bit in I/O is set, no need to read the sample into a register
+    "rjmp sample%=              \n\t" // After 16 samples the pin was not set yet, so continue sampling
     // This whole loop can sample 16 samples in 21 clocks (jump included) :
     // 16 x 1clk samples, 3 x 1clk count logic, 1 x 2clk repeat jump.
     // Averaging 1.3 clocks per sample (upto 4080 samples when SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT is 255 )
@@ -183,57 +183,62 @@ uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SampleOnce(void) {
     // This is not critical part of the sampling and binary search might have
     // introduced bugs, hard readability and not easy to scale (if more/or less
     // registers will be added to the buffer)
-    "sbrs %[reg0], %[bit] \n\t"
-    "inc %[minor] \n\t"
 
-    "sbrs %[reg1], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "sbrs %[reg7], %[bit]  \n\t" // Do a half point check to know what halve to test
+    "rjmp middle7tree%=    \n\t"
 
-    "sbrs %[reg2], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "sbrs %[reg0], %[bit]  \n\t"
+    "inc %[minor]          \n\t"
 
-    "sbrs %[reg3], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "sbrs %[reg1], %[bit]  \n\t"
+    "inc %[minor]          \n\t"
 
-    "sbrs %[reg4], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "sbrs %[reg2], %[bit]  \n\t"
+    "inc %[minor]          \n\t"
 
-    "sbrs %[reg5], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "sbrs %[reg3], %[bit]  \n\t"
+    "inc %[minor]          \n\t"
 
-    "sbrs %[reg6], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "sbrs %[reg4], %[bit]  \n\t"
+    "inc %[minor]          \n\t"
 
-    "sbrs %[reg7], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "sbrs %[reg5], %[bit]  \n\t"
+    "inc %[minor]          \n\t"
 
-    "sbrs %[reg8], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "sbrs %[reg6], %[bit]  \n\t"
+    "inc %[minor]          \n\t"
+    "rjmp end%=            \n\t" // Finished with the first halve
 
-    "sbrs %[reg9], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "middle7tree%=:        \n\t" // Starting second halve
+    "subi %[minor], -8     \n\t" // Add 8 for all the registers we skipped
+
+    "sbrs %[reg8], %[bit]  \n\t"
+    "inc %[minor]          \n\t"
+
+    "sbrs %[reg9], %[bit]  \n\t"
+    "inc %[minor]          \n\t"
 
     "sbrs %[reg10], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "inc %[minor]          \n\t"
 
     "sbrs %[reg11], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "inc %[minor]          \n\t"
 
     "sbrs %[reg12], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "inc %[minor]          \n\t"
 
     "sbrs %[reg13], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "inc %[minor]          \n\t"
 
     "sbrs %[reg14], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "inc %[minor]          \n\t"
 
-    "rjmp end%= \n\t"                  // Finished counting
+    "rjmp end%=            \n\t" // Finished counting
 
 
     // Major counter timeouted, return 0
-    "timeout%=: \n\t"                  
-    "clr %[major] \n\t"                // clear major => eor major,major
+    "timeout%=:            \n\t"                  
+    "clr %[major]          \n\t" // clear major => eor major,major
 
     // Return our regular major + minor results
     "end%=:"

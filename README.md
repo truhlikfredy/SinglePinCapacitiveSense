@@ -14,6 +14,8 @@
 - Allows being tweaked from the constructors and from the defines as well.
 - If small enough samples iterations are used, then on compile-time it will be **auto-detected** and the some return types and internal variables can **shrink** from uint32_t to uint16_t (making footprint smaller)
 - Because v2.0 has much higher sampling speed, it can recognize the **pressure** much more **precisely**.
+- Bundled in calibration (which will remove 'DC' offset from the measurements)
+- Bundled debounced methods
 
 # Disadvantages
 
@@ -32,8 +34,9 @@
 |------|-----------------|----------------|
 |Arduino Duemilanova - ATmega328 - 16MHz | PASS | PASS|
 |Arduino Uno | PASS | Do not have HW to test|
-|Arduino Nano - ATmega328 | PASS | Do not have HW to test|
+|Arduino Nano - ATmega328 - 16MHz| PASS | PASS|
 |Arduino Mega 2560 | PASS | Do not have HW to test|
+|Arduino Mega ADK - 16MHz| PASS | PASS|
 
 Note: To see the CI build logs, visit the [Travis-CI](https://travis-ci.org/truhlikfredy/SinglePinCapacitiveSense) website.
 
@@ -58,14 +61,18 @@ How many times the sensor will be sampled (when constructor arguments are left t
 `#define SINGLE_PIN_CAPACITIVE_SENSE_DEFAULT_SAMPLING 16`
 
 
-To change how many sets of the 16 micro samples have to be taken before the capacitance considered too high and sampling aborted as an error (non-touched result). Has to be lower than 255 and it shouldn't be too low because even untouched pin might take some time to get passed by the sampler:
+To change how many sets of the 16 micro samples have to be taken before the capacitance considered too high and sampling aborted as an error (non-touched result). Has to be lower than 256 and it shouldn't be too low because even untouched pin might take some time to get passed by the sampler:
 
-`#define SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT 254`
+`#define SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT 255`
 
 
 When calibrating the inputs to detect what is the lowest noise level, how many of these have to be returned in the row to consider the global minimum and not some intermittent temporary local minimum/noise. This will make the first X iteration of the touch sensing ineffective as the sensor will be calibrating itself:
 
 `#define SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT 8`
+
+To change the default deboucing counter when no argument IsPressedDebounced(); is used, however for custom non-global changes there is IsPressedDebounced(uint8_t count); as well:
+
+`#define SINGLE_PIN_CAPACITIVE_SENSE_DEBOUNCE_COUNT 10`
 
 # How this works
 
@@ -81,19 +88,32 @@ When the sensor is touched the capacitance increases and charge-up slows down, b
 
 ![charging up when touching](../assets/images/press.png?raw=true)
 
-The fact that whit **TTL 5V** the input can be considered **HIGH** already at **2V** is making this even more time-critical. On the figures above the voltage can get over 2V because the sampling is not as fast and charged up beyond the 2V before it was tested and pulled down (Note that release 2.0 and above is much faster). Another problem is that the pull-up resistor is not exactly specified and can be different between the devices. So this approach is not as robust/portable as the previously mentioned approaches, but if somebody can tune it for their device/environment/conditions, then it should be fine for hobby projects. However, this shouldn't be used for any critical input on a system that needs to be dependable.
+The fact that with **TTL 5V** the input can be considered **HIGH** already at **2V** is making this even more time-critical. On the figures above the voltage can get over 2V because the sampling is not as fast and can charged up beyond the 2V before it was tested and pulled down (Note that release 2.0 and above is much faster). Another problem is that the pull-up resistor is not exactly specified and can be different between the devices (20k - 100k). Values which work for me might not work for others and therefore it was important to include self-calibration. Overall this method is not as robust/portable as the previously mentioned approaches, but if somebody can tune it for their device/environment/conditions, then it should be fine for hobby projects. However, this shouldn't be used for any critical input on a system that needs to be dependable.
 
 # Why C++ templates are used
 
-Because the code can't be generic, the PORT address and pin have to be hardcoded. If port and pin are generic, they are treated as any value, and 16bit addressing is used (using a pair of 8bit registers, X/Y/Z), pin mask can be generated and stored, but negation has to be evaluated (and stored) as well (just to be able to set/clear/test the bits). Because these can change on runtime the compiler might struggle to optimize this further and will involve many clocks.
+Because the code can't be generic, the PORT address and pin have to be hardcoded. If port and pin are generic, they are treated as any value, and 16bit addressing is used (using a pair of 8bit registers, X/Y/Z), pin mask can be generated and stored, but negation has to be evaluated (and stored) as well (just to be able to set/clear/test the bits). Because these can change on runtime the compiler might struggle to optimize this further and will involve many clocks wasted moving data around (into the registers) when they could have been as immediate values.
 
 With hard-coded approach the compiler can see few things:
 
-- The pin/mask is actually one-hot schema and this can be detected by the compiler, instead of testing value with the immediate AND (ANDI) it can be tested directly by a bit set/clear test as the AVR has instructions to test specific bits.
+- The pin/mask is actually one-hot schema and this can be detected by the compiler, instead of testing value with the immediate AND (ANDI) it can be tested directly by a bit set/clear test as the AVR has instructions to test specific bits. Revision 2.0 switched to BIT_PIN position schema instead and is not even using the mask at all. At few places where a mask is needed it is used with 1 << BIT_PIN, which actually compiler will optimize, calculate bit position from it and use bit tests instructions instead of a mask.
 
-- That the PORT pointer is not regular 16-bit pointer, for lower address regions there are instructions with I/O direct addressing, for 6-bit addresses (0x20 - 0x5F) there is input (IN) instruction where the address is part of the OP-code and there is no need to use the 16-bit register pairs, it loads the content into a register and with ANDI mask can be tested for the bit. However, for the even lower 5-bit region (0x20 - 0x3F) there are instructions (SBIC/SBIS) that can test for a specific bit is set/clear without even loading the content into a register or needing to invoke ANDI. Not just this combines two steps into one, but both address and bit location are direct and are part of the OP-code, so no need to load registers with the address and bit. 
+- The PORT pointer is not regular 16-bit pointer, for lower address regions there are instructions with I/O direct addressing, for 6-bit addresses (0x20 - 0x5F) there is input (IN) instruction where the address is part of the OP-code and there is no need to use the 16-bit register pairs, it loads the content into a register and with ANDI mask can be tested for the bit. However, for the even lower 5-bit region (0x20 - 0x3F) there are instructions (SBIC/SBIS) that can test for a specific bit is set/clear without even loading the content into a register or needing to invoke ANDI. Not just this combines two steps into one, but both address and bit location are direct and are immediate part of the OP-code, so no need to load registers with the address and bit position.
 
-- Because the compiler knows in advance that the desired port is in the **I/O 5-bit** region and that the mask is **one-hot**, it can effectively utilize the **SBIC** / **SBIS** instructions and drastically speed up the runtime execution, which so essential for this approach to work. And wouldn't be possible if the code would have to be generic and work with any mask and pointer. It's cleaner as well, everything needed is contained in the instruction and doesn't require any other registers to be populated. Now 15 samples are taken with IN instruction into registers and the 16th with SBIS (if it fails only then the previously 15 samples are analyzed, but then the speed doesn't matter). Overflow counter checking is done between the IN samples (~1 extra instruction between 4 sampling instructions).
+- Because the compiler knows in advance that the desired port is in the **I/O 5-bit** region and that the mask is **one-hot**, it can effectively utilize the **SBIC** / **SBIS** instructions to test specific bit position and drastically speed up the runtime execution, which so essential for this approach to work. And wouldn't be possible if the code would have to be runtime generic and work with any mask and any pointer. It's cleaner as well, everything needed is contained in the instruction's opcodes and doesn't require any other registers to be populated. Now 15 samples are taken with IN instruction into registers as a buffer and the 16th with SBIS. If it fails then the previously taken 15 samples are analyzed (to find exactly where, but then the speed doesn't matter anymore). If it passes it will loop again to take another 15 samples into the same registers (nothing interesting happended so we could disregard the whole previous content of the buffer). Overflow counter checking is done between the IN samples (~1 extra instruction between 4 sampling instructions), this way the jitter between sampling and not-sampling is more evently spread over.
+
+Note: The 'constexpr' workaround is not ideal, see the discussion here: [https://www.avrfreaks.net/comment/2847256#comment-2847256](https://www.avrfreaks.net/comment/2847256#comment-2847256), for example when using mega328 the iom328p.h will be included which will define the port:
+```
+#define PORTD _SFR_IO8(0x0B)
+```
+
+Together with sfr_defs.h:
+```
+#define _SFR_IO8(io_addr) _MMIO_BYTE((io_addr) + __SFR_OFFSET)
+#define _MMIO_BYTE(mem_addr) (*(volatile uint8_t *)(mem_addr))
+```
+
+The port might end up being defined as `(*(volatile uint8_t *)( 0x0B + 0x20))` which might be tricky to correctly convert back to the pure offset literal which can be feed as template's non-type parameter. I will try to experiment a bit with few things and if better solution will be made I will update this project.
 
 # References
 
@@ -111,6 +131,10 @@ With hard-coded approach the compiler can see few things:
 
 [http://ww1.microchip.com/downloads/en/devicedoc/atmel-0856-avr-instruction-set-manual.pdf](http://ww1.microchip.com/downloads/en/devicedoc/atmel-0856-avr-instruction-set-manual.pdf)
 
+## AVR pinouts
+
+[https://grobotronics.com/images/companies/1/datasheets/arduino-mega-pinout-diagram.jpg](https://grobotronics.com/images/companies/1/datasheets/arduino-mega-pinout-diagram.jpg)
+
 ## ASM in C
 
 [https://www.microchip.com/webdoc/AVRLibcReferenceManual/inline_asm_1gcc_asm.html](https://www.microchip.com/webdoc/AVRLibcReferenceManual/inline_asm_1gcc_asm.html)
@@ -126,3 +150,4 @@ With hard-coded approach the compiler can see few things:
 [https://stackoverflow.com/questions/37303968](https://stackoverflow.com/questions/37303968)
 
 [https://stackoverflow.com/questions/115703](https://stackoverflow.com/questions/115703)
+

@@ -15,10 +15,10 @@
 #endif
 
 #ifndef SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT
-// When the sampler gives up, it needs to be equal or lower than 255 and lower
+// When the sampler gives up, it needs to be equal or lower than 256 and lower
 // than 65535/sampling (if SPC_VAL uint16_t is used). Giving it value too low
 // might disregard genuine presses
-#define SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT          254
+#define SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT          255
 #endif
 
 #ifndef SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT
@@ -26,6 +26,11 @@
 // measurementOffset (and it will take 4 measurements before any trigger can be
 // detected)
 #define SINGLE_PIN_CAPACITIVE_SENSE_STREAK_COUNT     8
+#endif
+
+#ifndef SINGLE_PIN_CAPACITIVE_SENSE_DEBOUNCE_COUNT
+// The default value how many iterations it takes consider the state as stable
+#define SINGLE_PIN_CAPACITIVE_SENSE_DEBOUNCE_COUNT   10
 #endif
 
 #ifndef SPC_VAL
@@ -52,8 +57,11 @@ class SinglePinCapacitiveSense {
     bool     IsValidConfig(uint8_t arduinoPin);  // Check if the hard-coded values match with the Arduino pin values
     SPC_VAL  SampleAllSamples(void);             // Just do a measurement of all this->samples samples
     bool     IsPressed(void);                    // Do measurement and decided if the sensor was pressed or not
+    bool     IsPressedDebounced();               // Using the SINGLE_PIN_CAPACITIVE_SENSE_DEBOUNCE_COUNT as default
+    bool     IsPressedDebounced(uint8_t count);  // Using specified counter
     SPC_VAL  GetLastMeasurementRaw(void);        // Return the value as measured
     SPC_VAL  GetLastMeasurementCalibrated(void); // Return the measured value - the measurementOffset (primitive high-pass filtering)
+    bool     GetDebouncedState(void);            // Return the stable state after the sensor was debounced
     void     Calibrate(void);                    // To reset the measurementOffset (normally invoked from the constructor)
     
   private:
@@ -63,6 +71,7 @@ class SinglePinCapacitiveSense {
     SPC_VAL  measurementOffset;                  // Keep track what was the smallest measurement which was measured consistently for many measurements
     SPC_VAL  smallestMeasurement;                // Keep track what was the smallest measurement done so far (to calculated the GetLastMeasurementCalibrated()
     uint8_t  smallestMeasurementStreak;          // How many of last measurements in the row were same as the smallest measurement
+    bool     debouncedState;                     // The stable state after the sensor was debounced
 
     void     ConstructorCommon(void);            // Prepare the pin and fields to expected state
     uint16_t SampleOnce(void);                   // Will measure the capacity once
@@ -100,6 +109,8 @@ SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SinglePinCapacitiveSense() {
 template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
 void SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::ConstructorCommon(void) {
   this->Calibrate();
+
+  this->debouncedState = false;
 
   // Should be safe even if IRQ happened between these two lines
   *((volatile uint8_t *)PINx_ADDR+2) &= ~(1 << PIN_BIT); // PORTx Output will be LOW (Input to High-Z)
@@ -143,31 +154,32 @@ uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SampleOnce(void) {
   // but spread out and smaller stalls.
   // IN is inert to SREG and we can spread the control logic between sampling
   asm (
-    "sample%=: \n\t"
-    "in %[reg0],   %[addr] \n\t"
-    "in %[reg1],   %[addr] \n\t"
-    "in %[reg2],   %[addr] \n\t"
-    "in %[reg3],   %[addr] \n\t"
-    "inc %[major] \n\t"                // Increment the major counter
-    "in %[reg4],   %[addr] \n\t"
-    "in %[reg5],   %[addr] \n\t"
-    "in %[reg6],   %[addr] \n\t"
-    "in %[reg7],   %[addr] \n\t"
-    "cpi %[major], %[major_max] \n\t"  // Compare major counter with SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT
-    "in %[reg8],   %[addr] \n\t"
-    "in %[reg9],   %[addr] \n\t"  
-    "in %[reg10],  %[addr] \n\t"
-    "in %[reg11],  %[addr] \n\t"
-    "brcc timeout%= \n\t"              // Branch if carry cleared (major > SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT)
-    "in %[reg12],  %[addr] \n\t"
-    "in %[reg13],  %[addr] \n\t"
-    "in %[reg14],  %[addr] \n\t"
-    "sbis %[addr], %[bit] \n\t"        // Skip if bit in I/O is set, no need to read the sample into a register
-    "rjmp sample%= \n\t"               // After 16 samples the pin was not set yet, so continue sampling
+    "sample%=:                  \n\t"
+    "in %[reg0],   %[addr]      \n\t"
+    "in %[reg1],   %[addr]      \n\t"
+    "in %[reg2],   %[addr]      \n\t"
+    "in %[reg3],   %[addr]      \n\t"
+    "inc %[major]               \n\t" // Increment the major counter
+    "in %[reg4],   %[addr]      \n\t"
+    "in %[reg5],   %[addr]      \n\t"
+    "in %[reg6],   %[addr]      \n\t"
+    "in %[reg7],   %[addr]      \n\t"
+    "cpi %[major], %[major_max] \n\t" // Compare major counter with SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT
+    "in %[reg8],   %[addr]      \n\t"
+    "in %[reg9],   %[addr]      \n\t"  
+    "in %[reg10],  %[addr]      \n\t"
+    "in %[reg11],  %[addr]      \n\t"
+    "breq timeout%=             \n\t" // Branch if equal (major == SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT)
+    "in %[reg12],  %[addr]      \n\t"
+    "in %[reg13],  %[addr]      \n\t"
+    "in %[reg14],  %[addr]      \n\t"
+    "sbis %[addr], %[bit]       \n\t" // Skip if bit in I/O is set, no need to read the sample into a register
+    "rjmp sample%=              \n\t" // After 16 samples the pin was not set yet, so continue sampling
     // This whole loop can sample 16 samples in 21 clocks (jump included) :
     // 16 x 1clk samples, 3 x 1clk count logic, 1 x 2clk repeat jump.
     // Averaging 1.3 clocks per sample (upto 4080 samples when SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT is 255 )
 
+    // TODO: Theoretically here the IRQs would be safe to be enabled
 
     // Go through all 15 registers and count how long they were not set
     // The binary search was tempting, but buffer is too small and caused
@@ -175,82 +187,88 @@ uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SampleOnce(void) {
     // This is not critical part of the sampling and binary search might have
     // introduced bugs, hard readability and not easy to scale (if more/or less
     // registers will be added to the buffer)
-    "sbrs %[reg0], %[bit] \n\t"
-    "inc %[minor] \n\t"
 
-    "sbrs %[reg1], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "sbrs %[reg7], %[bit]  \n\t" // Do a half point check to know what halve to test
+    "rjmp middle7tree%=    \n\t"
 
-    "sbrs %[reg2], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "sbrs %[reg0], %[bit]  \n\t"
+    "inc %[minor]          \n\t"
 
-    "sbrs %[reg3], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "sbrs %[reg1], %[bit]  \n\t"
+    "inc %[minor]          \n\t"
 
-    "sbrs %[reg4], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "sbrs %[reg2], %[bit]  \n\t"
+    "inc %[minor]          \n\t"
 
-    "sbrs %[reg5], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "sbrs %[reg3], %[bit]  \n\t"
+    "inc %[minor]          \n\t"
 
-    "sbrs %[reg6], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "sbrs %[reg4], %[bit]  \n\t"
+    "inc %[minor]          \n\t"
 
-    "sbrs %[reg7], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "sbrs %[reg5], %[bit]  \n\t"
+    "inc %[minor]          \n\t"
 
-    "sbrs %[reg8], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "sbrs %[reg6], %[bit]  \n\t"
+    "inc %[minor]          \n\t"
+    "rjmp end%=            \n\t" // Finished with the first halve
 
-    "sbrs %[reg9], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "middle7tree%=:        \n\t" // Starting second halve
+    "subi %[minor], -8     \n\t" // Add 8 for all the registers we skipped
+
+    "sbrs %[reg8], %[bit]  \n\t"
+    "inc %[minor]          \n\t"
+
+    "sbrs %[reg9], %[bit]  \n\t"
+    "inc %[minor]          \n\t"
 
     "sbrs %[reg10], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "inc %[minor]          \n\t"
 
     "sbrs %[reg11], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "inc %[minor]          \n\t"
 
     "sbrs %[reg12], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "inc %[minor]          \n\t"
 
     "sbrs %[reg13], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "inc %[minor]          \n\t"
 
     "sbrs %[reg14], %[bit] \n\t"
-    "inc %[minor] \n\t"
+    "inc %[minor]          \n\t"
 
-    "rjmp end%= \n\t"                  // Finished counting
+    "rjmp end%=            \n\t" // Finished counting
 
 
     // Major counter timeouted, return 0
-    "timeout%=: \n\t"                  
-    "clr %[major] \n\t"                // clear major => eor major,major
+    "timeout%=:            \n\t"                  
+    "clr %[major]          \n\t" // clear major => eor major,major
 
     // Return our regular major + minor results
     "end%=:"
 
 
-    : [reg0]  "=r"(b0), 
-      [reg1]  "=r"(b1),
-      [reg2]  "=r"(b2),
-      [reg3]  "=r"(b3),
-      [reg4]  "=r"(b4),
-      [reg5]  "=r"(b5),
-      [reg6]  "=r"(b6),
-      [reg7]  "=r"(b7),
-      [reg8]  "=r"(b8),
-      [reg9]  "=r"(b9),
-      [reg10] "=r"(b10),
-      [reg11] "=r"(b11),
-      [reg12] "=r"(b12),
-      [reg13] "=r"(b13),
-      [reg14] "=r"(b14),
-      [major] "+d"(major),    // Have to use 'd' because I want to use CPI which only works on higher 16 registers
-      [minor] "+r"(minor)
-    : [addr]  "I"(PINx_ADDR - __SFR_OFFSET), // Same effect as _SFR_IO_ADDR(PINx_ADDR), changing absolute address to IO address
-      [bit]   "I"(PIN_BIT),
-      [major_max] "M"(SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT)
+    : [reg0]      "=r"(b0), 
+      [reg1]      "=r"(b1),
+      [reg2]      "=r"(b2),
+      [reg3]      "=r"(b3),
+      [reg4]      "=r"(b4),
+      [reg5]      "=r"(b5),
+      [reg6]      "=r"(b6),
+      [reg7]      "=r"(b7),
+      [reg8]      "=r"(b8),
+      [reg9]      "=r"(b9),
+      [reg10]     "=r"(b10),
+      [reg11]     "=r"(b11),
+      [reg12]     "=r"(b12),
+      [reg13]     "=r"(b13),
+      [reg14]     "=r"(b14),
+      [major]     "+d"(major), // Have to use 'd' because I want to use CPI which only works on higher 16 registers
+      [minor]     "+r"(minor)  // Need + read/write for minor counter, but 'r' is enough for INC instruction
+
+    : [addr]      "I"(PINx_ADDR - __SFR_OFFSET),           // Same effect as _SFR_IO_ADDR(PINx_ADDR), changing absolute address to IO address
+      [bit]       "I"(PIN_BIT),                            // 0..63 immediate is enough for a bit position
+      [major_max] "M"(SINGLE_PIN_CAPACITIVE_SENSE_TIMEOUT) // Needed 0..255 immediate for this constant
   );
 
 #if SINGLE_PIN_CAPACITIVE_SENSE_BLOCK_IRQ == 1
@@ -259,7 +277,7 @@ uint16_t SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::SampleOnce(void) {
 
   this->SampleCleanup();
 
-  return major << 4 | minor;
+  return major << 4 | minor; // Minor counter is 0-15 so the major has to shift only by 4 bits
 }
 
 
@@ -323,6 +341,40 @@ bool SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::IsPressed(void) {
       return false;
     }
   }
+}
+
+
+template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
+bool SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::GetDebouncedState(void) {
+  return this->debouncedState;
+}
+
+
+template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
+bool SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::IsPressedDebounced(uint8_t count) {
+  static uint8_t currentCount = 0;
+  static bool    oldState     = false;
+  bool           currentState = this->IsPressed();
+
+  if (oldState != currentState) {
+    currentCount = 0;
+  } else {
+    if (currentCount > count) {
+      this->debouncedState = currentState;
+    } else {
+      currentCount++;
+    }
+  }
+
+  oldState = currentState;
+
+  return this->debouncedState;
+}
+
+
+template<uintptr_t PINx_ADDR, uint8_t PIN_BIT>
+bool SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>::IsPressedDebounced(void) {
+  return this->IsPressedDebounced(SINGLE_PIN_CAPACITIVE_SENSE_DEBOUNCE_COUNT);
 }
 
 

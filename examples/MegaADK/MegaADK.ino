@@ -2,6 +2,8 @@
 
 // Copyright 2020 Anton Krug - MIT License
 
+// Tested with Arduino Mega ADK, but should work with Arduino Mega 2560 as well.
+
 // See the PollingThreePins example for more comments and explanation how this 
 // works and how it can be configured
 

@@ -44,8 +44,8 @@ SinglePinCapacitiveSense<PortD(), 4> sensePin4;  // Arduino Pin4 = AVR PortD3
 // SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>(uint8_t samples); 
 // SinglePinCapacitiveSense<PINx_ADDR, PIN_BIT>();
 
-// Might not apply to all Arduino AVR devices, but in general should be correct:
-// Usually Arduino pin 0-7 are PORTD, 8-13 PORTB (do not use analogue ports for
+// It does not apply to all Arduino AVR devices, and is example from Duemilanove
+// board. Arduino pin 0-7 are PORTD, 8-13 PORTB (do not use analogue ports for
 // this). If not exactly knowing how to setup the mask and port address then
 // just make the pin with some estimated values (even wrong ones) and call
 // IsValidConfig(<DESIRED_ARDUINO_PIN>) it will validate the settings and if

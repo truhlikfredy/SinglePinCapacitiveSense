@@ -2,7 +2,8 @@
 
 // Copyright 2020 Anton Krug - MIT License
 
-// See the PollingThreePins for more comments and explanation how this works
+// See the PollingThreePins example for more comments and explanation how this 
+// works and how it can be configured
 
 // Showing how to use Arduino with different pin mapping
 constexpr uintptr_t PortE() {

@@ -32,8 +32,9 @@
 |------|-----------------|----------------|
 |Arduino Duemilanova - ATmega328 - 16MHz | PASS | PASS|
 |Arduino Uno | PASS | Do not have HW to test|
-|Arduino Nano - ATmega328 | PASS | Do not have HW to test|
+|Arduino Nano - ATmega328 - 16MHz| PASS | PASS|
 |Arduino Mega 2560 | PASS | Do not have HW to test|
+|Arduino Mega ADK - 16MHz| PASS | PASS|
 
 Note: To see the CI build logs, visit the [Travis-CI](https://travis-ci.org/truhlikfredy/SinglePinCapacitiveSense) website.
 

@@ -1,5 +1,7 @@
 # So the example canbe used to test the library
 ln -s ./examples/PollingThreePins/PollingThreePins.ino SinglePinCapacitiveSense.ino
+#ln -s ./examples/PollingThreePins/MegaADK.ino SinglePinCapacitiveSense.ino
+#ln -s ./examples/PollingThreePins/Debounced.ino SinglePinCapacitiveSense.ino
 
 mkdir build-uno
 mkdir build-due

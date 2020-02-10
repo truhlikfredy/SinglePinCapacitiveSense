@@ -95,6 +95,19 @@ With hard-coded approach the compiler can see few things:
 
 - Because the compiler knows in advance that the desired port is in the **I/O 5-bit** region and that the mask is **one-hot**, it can effectively utilize the **SBIC** / **SBIS** instructions to test specific bit position and drastically speed up the runtime execution, which so essential for this approach to work. And wouldn't be possible if the code would have to be runtime generic and work with any mask and any pointer. It's cleaner as well, everything needed is contained in the instruction's opcodes and doesn't require any other registers to be populated. Now 15 samples are taken with IN instruction into registers as a buffer and the 16th with SBIS. If it fails then the previously taken 15 samples are analyzed (to find exactly where, but then the speed doesn't matter anymore). If it passes it will loop again to take another 15 samples into the same registers (nothing interesting happended so we could disregard the whole previous content of the buffer). Overflow counter checking is done between the IN samples (~1 extra instruction between 4 sampling instructions), this way the jitter between sampling and not-sampling is more evently spread over.
 
+Note: The 'constexpr' workaround is not ideal, see the discussion here: [https://www.avrfreaks.net/comment/2847256#comment-2847256](https://www.avrfreaks.net/comment/2847256#comment-2847256), for example when using mega328 the iom328p.h will be included which will define the port:
+```
+#define PORTD _SFR_IO8(0x0B)
+```
+
+Together with sfr_defs.h:
+```
+#define _SFR_IO8(io_addr) _MMIO_BYTE((io_addr) + __SFR_OFFSET)
+#define _MMIO_BYTE(mem_addr) (*(volatile uint8_t *)(mem_addr))
+```
+
+The port might end up being defined as `(*(volatile uint8_t *)( 0x0B + 0x20))` which might be tricky to correctly convert back to the pure offset literal which can be feed as template's non-type parameter. I will try to experiment a bit with few things and if better solution will be made I will update this project.
+
 # References
 
 ## Capacitive touch
